@@ -22,8 +22,8 @@
     <artifactId>changefeed</artifactId>
     <version>1.0-SNAPSHOT</version>
 
-    <name>Neo4j GraphAware Runtime Module Maven Archetype</name>
-    <description>Neo4j GraphAware Runtime Module Maven Archetype</description>
+    <name>GraphAware ChangeFeed Module</name>
+    <description>GraphAware ChangeFeed Module to provide a stream of changes on the graph</description>
 
     <licenses>
         <license>
