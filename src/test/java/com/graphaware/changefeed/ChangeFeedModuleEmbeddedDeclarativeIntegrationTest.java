@@ -11,9 +11,7 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 import java.util.Date;
 import java.util.Deque;
 
-/**
- * Created by luanne on 02/07/14.
- */
+
 public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest {
 
     private GraphDatabaseService database;
@@ -58,14 +56,14 @@ public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest {
 
         ChangeSet set1 = changes.removeFirst();
         Date set1Date = set1.getChangeDate();
-        Assert.assertTrue(set1.getChanges().size()==2);
+        Assert.assertTrue(set1.getChanges().size() == 2);
         Assert.assertTrue(set1.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         Assert.assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
 
 
         ChangeSet set2 = changes.removeFirst();
         Date set2Date = set2.getChangeDate();
-        Assert.assertTrue(set2.getChanges().size()==1);
+        Assert.assertTrue(set2.getChanges().size() == 1);
         Assert.assertTrue(set2.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
 
         ChangeSet set3 = changes.removeFirst();

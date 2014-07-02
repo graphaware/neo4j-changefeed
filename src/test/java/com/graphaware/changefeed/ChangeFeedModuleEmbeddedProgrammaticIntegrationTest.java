@@ -60,14 +60,14 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
         ChangeSet set1 = changes.removeFirst();
         Date set1Date = set1.getChangeDate();
-        Assert.assertTrue(set1.getChanges().size()==2);
+        Assert.assertTrue(set1.getChanges().size() == 2);
         Assert.assertTrue(set1.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         Assert.assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
 
 
         ChangeSet set2 = changes.removeFirst();
         Date set2Date = set2.getChangeDate();
-       Assert.assertTrue(set2.getChanges().size()==1);
+        Assert.assertTrue(set2.getChanges().size() == 1);
         Assert.assertTrue(set2.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
 
         ChangeSet set3 = changes.removeFirst();
@@ -117,20 +117,20 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
         ChangeSet set1 = changes.removeFirst();
         Date set1Date = set1.getChangeDate();
-        Assert.assertTrue(set1.getChanges().size()==1);
+        Assert.assertTrue(set1.getChanges().size() == 1);
         Assert.assertTrue(set1.getChanges().contains("Deleted node ({name: GraphAware})"));
 
 
         ChangeSet set2 = changes.removeFirst();
         Date set2Date = set2.getChangeDate();
-        Assert.assertTrue(set2.getChanges().size()==2);
+        Assert.assertTrue(set2.getChanges().size() == 2);
         Assert.assertTrue(set2.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         Assert.assertTrue(set2.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
 
 
         ChangeSet set3 = changes.removeFirst();
         Date set3Date = set3.getChangeDate();
-        Assert.assertTrue(set3.getChanges().size()==1);
+        Assert.assertTrue(set3.getChanges().size() == 1);
         Assert.assertTrue(set3.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
 
         Assert.assertTrue(set1Date.getTime() >= set2Date.getTime());

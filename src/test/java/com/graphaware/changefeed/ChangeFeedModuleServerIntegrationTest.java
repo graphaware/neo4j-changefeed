@@ -2,14 +2,13 @@ package com.graphaware.changefeed;
 
 import com.graphaware.test.integration.NeoServerIntegrationTest;
 import org.apache.http.HttpStatus;
+import org.junit.Test;
+
 import static com.graphaware.test.util.TestUtils.executeCypher;
 import static com.graphaware.test.util.TestUtils.get;
 import static org.junit.Assert.assertEquals;
-import org.junit.Test;
 
-/**
- * Created by luanne on 02/07/14.
- */
+
 public class ChangeFeedModuleServerIntegrationTest extends NeoServerIntegrationTest {
 
     public ChangeFeedModuleServerIntegrationTest() {
@@ -23,8 +22,8 @@ public class ChangeFeedModuleServerIntegrationTest extends NeoServerIntegrationT
 
     @Test
     public void graphChangesShouldAppearInChangeFeed() {
-        executeCypher("http://localhost:7474/" ,"CREATE (p:Person {name: 'MB'})");
-        assertEquals("Created node (:Person {name: MB})",get("http://localhost:7474/graphaware/changefeed", HttpStatus.SC_OK));
+        executeCypher("http://localhost:7474/", "CREATE (p:Person {name: 'MB'})");
+        assertEquals("Created node (:Person {name: MB})", get("http://localhost:7474/graphaware/changefeed", HttpStatus.SC_OK));
 
 
     }
