@@ -1,11 +1,14 @@
 package com.graphaware.module.changefeed;
 
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Deque;
+import java.util.List;
 
 /**
  * Created by luanne on 02/07/14.
@@ -14,9 +17,19 @@ import java.util.Deque;
 @RequestMapping("/changefeed")
 public class ChangeFeedApi {
 
+    ChangeFeed changeFeed;
+
+    @Autowired
+    public ChangeFeedApi(GraphDatabaseService database) {
+        changeFeed=new ChangeFeed(database);
+
+    }
+
+
+
     @RequestMapping(method = RequestMethod.GET)
     @ResponseBody
-    public Deque<ChangeSet> getChangeFeed() {
-        return ChangeFeedModule.getChanges();
+    public List<ChangeSet> getChangeFeed() {
+        return changeFeed.getChanges();
     }
 }
