@@ -56,7 +56,7 @@ public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest {
             tx.success();
         }
 
-       /* List<ChangeSet> changes = changeFeed.getChanges();
+        List<ChangeSet> changes = changeFeed.getChanges();
         Assert.assertTrue(changes.size() == 3);
 
         ChangeSet set1 = changes.get(0);
@@ -79,7 +79,7 @@ public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest {
         Assert.assertTrue(set3.getChanges().contains("Created relationship (:Person {name: MB})-[:WORKS_AT]->(:Company)"));
 
         Assert.assertTrue(set1Date.getTime() >= set2Date.getTime());
-        Assert.assertTrue(set2Date.getTime() >= set3Date.getTime());*/
+        Assert.assertTrue(set2Date.getTime() >= set3Date.getTime());
 
     }
 

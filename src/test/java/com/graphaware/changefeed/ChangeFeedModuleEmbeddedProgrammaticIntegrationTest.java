@@ -41,7 +41,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
     @Test
     public void feedShouldBeEmptyOnANewDatabase() {
         List<ChangeSet> changes = changeFeed.getChanges();
-     //   Assert.assertTrue(changes.size() == 0);
+       Assert.assertTrue(changes.size() == 0);
     }
 
     @Test
@@ -71,7 +71,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             tx.success();
         }
 
-      /*  List<ChangeSet> changes = changeFeed.getChanges();
+        List<ChangeSet> changes = changeFeed.getChanges();
         Assert.assertTrue(changes.size() == 3);
 
         ChangeSet set1 = changes.get(0);
@@ -80,7 +80,6 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         Assert.assertTrue(set1.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         Assert.assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
         Assert.assertEquals(set1.getSequence(),3);
-
         ChangeSet set2 = changes.get(1);
         Date set2Date = set2.getChangeDate();
         Assert.assertTrue(set2.getChanges().size() == 1);
@@ -96,7 +95,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         Assert.assertEquals(set3.getSequence(), 1);
 
         Assert.assertTrue(set1Date.getTime() >= set2Date.getTime());
-        Assert.assertTrue(set2Date.getTime() >= set3Date.getTime());*/
+        Assert.assertTrue(set2Date.getTime() >= set3Date.getTime());
 
     }
 
@@ -130,7 +129,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             node2.delete();
             tx.success();
         }
-       /* List<ChangeSet> changes = changeFeed.getChanges();
+        List<ChangeSet> changes = changeFeed.getChanges();
         Assert.assertTrue(changes.size() == 3);
 
         ChangeSet set1 = changes.get(0);
@@ -153,7 +152,6 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
         Assert.assertTrue(set1Date.getTime() >= set2Date.getTime());
         Assert.assertTrue(set2Date.getTime() >= set3Date.getTime());
-*/
     }
 
 

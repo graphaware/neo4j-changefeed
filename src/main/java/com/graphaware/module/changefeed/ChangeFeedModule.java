@@ -2,6 +2,7 @@ package com.graphaware.module.changefeed;
 
 import com.graphaware.runtime.BaseGraphAwareRuntimeModule;
 import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
+import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -46,7 +47,7 @@ public class ChangeFeedModule extends BaseGraphAwareRuntimeModule {
     public void beforeCommit(ImprovedTransactionData transactionData) {   //TODO this should be afterCommit
         if (transactionData.mutationsOccurred()) {
             ChangeSet changeset = new ChangeSet();
-            changeset.setChanges(transactionData.mutationsToStrings());
+            changeset.getChanges().addAll(transactionData.mutationsToStrings());
             changeset.setSequence(sequence.incrementAndGet());
             changeFeed.recordChange(changeset);
         }

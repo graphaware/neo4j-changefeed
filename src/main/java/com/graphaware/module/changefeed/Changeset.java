@@ -4,7 +4,9 @@ import java.text.DateFormat;
 import java.text.FieldPosition;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -14,7 +16,7 @@ public class ChangeSet {
 
     private int sequence;
     private Date changeDate;
-    private Set<String> changes;
+    private List<String> changes=new ArrayList<>();
 
 
     public ChangeSet() {
@@ -29,11 +31,11 @@ public class ChangeSet {
         this.changeDate = changeDate;
     }
 
-    public Set<String> getChanges() {
+    public List<String> getChanges() {
         return changes;
     }
 
-    public void setChanges(Set<String> changes) {
+    public void setChanges(List<String> changes) {
         this.changes = changes;
     }
 
