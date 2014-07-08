@@ -7,7 +7,6 @@ import org.junit.Test;
 
 import static com.graphaware.test.util.TestUtils.executeCypher;
 import static com.graphaware.test.util.TestUtils.get;
-import static org.junit.Assert.assertEquals;
 
 
 public class ChangeFeedModuleServerIntegrationTest extends NeoServerIntegrationTest {

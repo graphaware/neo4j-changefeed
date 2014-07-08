@@ -7,10 +7,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -22,13 +19,21 @@ import static org.neo4j.tooling.GlobalGraphOperations.at;
  */
 public class ChangeFeedModule extends BaseGraphAwareRuntimeModule {
 
-    private ChangeFeed changeFeed;
+    private final ChangeFeed changeFeed;
+    private final AtomicInteger sequence=new AtomicInteger(0);
+    private static final int MAX_CHANGES_DEFAULT=50;
+    private static int maxChanges=MAX_CHANGES_DEFAULT;
 
-    private  AtomicInteger sequence=new AtomicInteger(0);
-
-    public ChangeFeedModule(String moduleId, GraphDatabaseService database) {
+    public ChangeFeedModule(String moduleId, GraphDatabaseService database, Map<String,String> config) {
         super(moduleId);
+        if(config.get("maxChanges")!=null) {
+            maxChanges=Integer.parseInt(config.get("maxChanges"));
+        }
         this.changeFeed=new ChangeFeed(database);
+    }
+
+    public static int getMaxChanges() {
+        return maxChanges;
     }
 
     @Override

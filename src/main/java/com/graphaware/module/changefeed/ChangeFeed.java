@@ -3,7 +3,6 @@ package com.graphaware.module.changefeed;
 import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.graphdb.*;
-import org.neo4j.helpers.collection.MapUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -16,31 +15,34 @@ import static org.neo4j.tooling.GlobalGraphOperations.at;
  */
 public class ChangeFeed {
 
-    private final static int MAX_CHANGES = 3; //TODO this has to be configurable
-    private final Deque<ChangeSet> changes = new ConcurrentLinkedDeque<>();
+    private final int maxChanges;
     private final GraphDatabaseService database;
     private final ExecutionEngine executionEngine;
-    private final String createChangeSetQuery=
-            "CREATE (change:ChangeSet {sequence: {sequence}, changeDate: {changeDate}, changes: {changes}}) with change " +
-            "MATCH (changeRoot:ChangeFeed) " +
-            "OPTIONAL MATCH (changeRoot)-[oldLink:NEXT]->(oldHead) " +
-            "MERGE (changeRoot)-[:NEXT]->(change) " +
-            "WITH change,oldLink,oldHead " +
-            "WHERE not(oldLink is null) " +
-            "MERGE (change)-[:NEXT]->(oldHead) " +
-            "DELETE oldLink";
-
-    private final String getChangesQuery="match (root:ChangeFeed)-[:NEXT*.." + MAX_CHANGES + "]->(change) return change";
 
     public ChangeFeed(GraphDatabaseService database) {
+        this.maxChanges=ChangeFeedModule.getMaxChanges();
         this.database = database;
         executionEngine = new ExecutionEngine(database);
     }
 
     public List<ChangeSet> getChanges() {
+       return getChanges(null);
+    }
+
+    public List<ChangeSet> getChanges(Integer since) {
         List<ChangeSet> changefeed = new ArrayList<>();
+        ExecutionResult result;
+        String getChangesQuery="match (root:ChangeFeed)-[:NEXT*.." + maxChanges + "]->(change) return change";
+        String getChangesSinceQuery="match (startChange:ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:NEXT*..]-(change:ChangeSet) return change order by change.sequence desc";
         try (Transaction tx = database.beginTx()) {
-            ExecutionResult result = executionEngine.execute(getChangesQuery);
+            if(since==null) {
+                result = executionEngine.execute(getChangesQuery);
+            }
+            else {
+                Map<String,Object> params = new HashMap<>();
+                params.put("sequence",since);
+                result = executionEngine.execute(getChangesSinceQuery,params);
+            }
             Iterator<Node> resultsIt = result.columnAs("change");
             while (resultsIt.hasNext()) {
                 Node changeNode = resultsIt.next();
@@ -53,7 +55,6 @@ public class ChangeFeed {
         }
         return changefeed;
     }
-
 
     public void recordChange(ChangeSet changeSet) {
         try (Transaction tx=database.beginTx()) {

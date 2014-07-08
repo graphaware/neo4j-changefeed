@@ -1,17 +1,14 @@
 package com.graphaware.changefeed;
 
 import com.graphaware.module.changefeed.ChangeFeed;
-import com.graphaware.module.changefeed.ChangeFeedModule;
 import com.graphaware.module.changefeed.ChangeSet;
 import junit.framework.Assert;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import java.util.Date;
-import java.util.Deque;
 import java.util.List;
 
 

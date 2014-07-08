@@ -13,6 +13,6 @@ public class ChangeFeedModuleBootstrapper implements GraphAwareRuntimeModuleBoot
 
     @Override
     public GraphAwareRuntimeModule bootstrapModule(String moduleId, Map<String, String> config, GraphDatabaseService database) {
-        return new ChangeFeedModule(moduleId,database);
+        return new ChangeFeedModule(moduleId,database,config);
     }
 }

@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Deque;
@@ -17,7 +18,7 @@ import java.util.List;
 @RequestMapping("/changefeed")
 public class ChangeFeedApi {
 
-    ChangeFeed changeFeed;
+    private final ChangeFeed changeFeed;
 
     @Autowired
     public ChangeFeedApi(GraphDatabaseService database) {
@@ -26,10 +27,9 @@ public class ChangeFeedApi {
     }
 
 
-
     @RequestMapping(method = RequestMethod.GET)
     @ResponseBody
-    public List<ChangeSet> getChangeFeed() {
-        return changeFeed.getChanges();
+    public List<ChangeSet> getChangeFeed(@RequestParam(value = "since", required = false) Integer since) {
+        return changeFeed.getChanges(since);
     }
 }
