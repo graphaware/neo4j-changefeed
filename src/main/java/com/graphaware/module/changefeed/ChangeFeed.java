@@ -52,6 +52,7 @@ public class ChangeFeed {
                 changeSet.setChanges(Arrays.asList((String[]) changeNode.getProperty("changes")));
                 changefeed.add(changeSet);
             }
+            tx.success();
         }
         return changefeed;
     }
@@ -77,14 +78,35 @@ public class ChangeFeed {
                 changeNode.createRelationshipTo(firstChange,Relationships.NEXT);
                 firstChangeRel.delete();
             }
+            else {
+                changeRoot.createRelationshipTo(changeNode,Relationships.OLDEST_CHANGE);
+            }
             changeRoot.createRelationshipTo(changeNode,Relationships.NEXT);
+
+            //Now prune the feed, make it async
+           /* int highSequence=changeSet.getSequence();
+            Node oldestNode=changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE,Direction.OUTGOING).getEndNode();
+            int lowSequence=(int)oldestNode.getProperty("sequence");
+            int nodesToDelete=((highSequence-lowSequence) + 1) - maxChanges;
+            Node newOldestNode=null;
+            boolean deleteNodes=false;
+            if(nodesToDelete>0) {
+                changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE,Direction.OUTGOING).delete();
+                deleteNodes=true;
+            }
+            while (nodesToDelete>0) {
+                Relationship rel  = oldestNode.getSingleRelationship(Relationships.NEXT,Direction.INCOMING);
+                newOldestNode=rel.getEndNode();
+                rel.delete();
+                oldestNode.delete();
+                oldestNode=newOldestNode;
+                nodesToDelete--;
+            }
+            if(deleteNodes) {
+                changeRoot.createRelationshipTo(newOldestNode,Relationships.OLDEST_CHANGE);
+            }*/
             tx.success();
         }
 
-        /*Map<String, Object> params = new HashMap<>();
-        params.put("sequence", changeSet.getSequence());
-        params.put("changeDate", changeSet.getChangeDate().getTime());
-        params.put("changes", changeSet.getChanges().toArray(new String[0]));
-        executionEngine.execute(createChangeSetQuery, params);*/
 }
 }

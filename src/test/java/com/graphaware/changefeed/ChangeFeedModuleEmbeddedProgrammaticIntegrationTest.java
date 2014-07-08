@@ -1,8 +1,6 @@
 package com.graphaware.changefeed;
 
-import com.graphaware.module.changefeed.ChangeFeed;
-import com.graphaware.module.changefeed.ChangeFeedModule;
-import com.graphaware.module.changefeed.ChangeSet;
+import com.graphaware.module.changefeed.*;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.ProductionGraphAwareRuntime;
 import junit.framework.Assert;
@@ -17,6 +15,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
+import static org.neo4j.tooling.GlobalGraphOperations.at;
+
 /**
  * Tests the module in an embedded db programmatically
  */
@@ -30,11 +31,11 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
     public void setUp() {
         database = new TestGraphDatabaseFactory().newImpermanentDatabase();
         GraphAwareRuntime runtime = new ProductionGraphAwareRuntime(database);
-        Map<String,String> config=new HashMap<>();
-        config.put("maxChanges","3");
+        Map<String, String> config = new HashMap<>();
+        config.put("maxChanges", "3");
 
-        runtime.registerModule(new ChangeFeedModule("CFM",database,config));
-        changeFeed=new ChangeFeed(database);
+        runtime.registerModule(new ChangeFeedModule("CFM", database, config));
+        changeFeed = new ChangeFeed(database);
     }
 
     @After
@@ -45,7 +46,32 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
     @Test
     public void feedShouldBeEmptyOnANewDatabase() {
         List<ChangeSet> changes = changeFeed.getChanges();
-       Assert.assertTrue(changes.size() == 0);
+        Assert.assertTrue(changes.size() == 0);
+    }
+
+    @Test
+    public void changeRootShouldHavePointerToOldestChange() {
+        Node node1, node2;
+        try (Transaction tx = database.beginTx()) {
+            node1 = database.createNode();
+            node1.setProperty("name", "MB");
+            tx.success();
+        }
+
+        try (Transaction tx = database.beginTx()) {
+            node2 = database.createNode();
+            node2.setProperty("name", "GraphAware");
+            tx.success();
+        }
+
+        try (Transaction tx = database.beginTx()) {
+            Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
+            Assert.assertNotNull(changeRoot);
+            Relationship rel = changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE, Direction.OUTGOING);
+            Assert.assertNotNull(rel);
+            Assert.assertEquals(1, rel.getEndNode().getProperty("sequence"));
+            tx.success();
+        }
     }
 
     @Test
@@ -83,12 +109,12 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         Assert.assertTrue(set1.getChanges().size() == 2);
         Assert.assertTrue(set1.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         Assert.assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
-        Assert.assertEquals(set1.getSequence(),3);
+        Assert.assertEquals(set1.getSequence(), 3);
         ChangeSet set2 = changes.get(1);
         Date set2Date = set2.getChangeDate();
         Assert.assertTrue(set2.getChanges().size() == 1);
         Assert.assertTrue(set2.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
-        Assert.assertEquals(2,set2.getSequence());
+        Assert.assertEquals(2, set2.getSequence());
 
         ChangeSet set3 = changes.get(2);
         Date set3Date = set3.getChangeDate();
@@ -96,7 +122,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         Assert.assertTrue(set3.getChanges().contains("Created node (:Company)"));
         Assert.assertTrue(set3.getChanges().contains("Created node (:Person {name: MB})"));
         Assert.assertTrue(set3.getChanges().contains("Created relationship (:Person {name: MB})-[:WORKS_AT]->(:Company)"));
-        Assert.assertEquals(1,set3.getSequence());
+        Assert.assertEquals(1, set3.getSequence());
 
         Assert.assertTrue(set1Date.getTime() >= set2Date.getTime());
         Assert.assertTrue(set2Date.getTime() >= set3Date.getTime());
@@ -191,20 +217,20 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         List<ChangeSet> changes = changeFeed.getChanges();
         Assert.assertTrue(changes.size() == 3);
 
-        changes=changeFeed.getChanges(2);
+        changes = changeFeed.getChanges(2);
         Assert.assertTrue(changes.size() == 2);
 
         ChangeSet set1 = changes.get(0);
         Assert.assertTrue(set1.getChanges().size() == 1);
         Assert.assertTrue(set1.getChanges().contains("Deleted node ({name: GraphAware})"));
-        Assert.assertEquals(4,set1.getSequence());
+        Assert.assertEquals(4, set1.getSequence());
 
 
         ChangeSet set2 = changes.get(1);
         Assert.assertTrue(set2.getChanges().size() == 2);
         Assert.assertTrue(set2.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         Assert.assertTrue(set2.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
-        Assert.assertEquals(3,set2.getSequence());
+        Assert.assertEquals(3, set2.getSequence());
 
     }
 
