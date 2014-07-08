@@ -3,7 +3,7 @@ package com.graphaware.module.changefeed;
 import org.neo4j.graphdb.RelationshipType;
 
 /**
- * Created by luanne on 05/07/14.
+ * Relationships used by the ChangeFeed module
  */
 public enum Relationships implements RelationshipType {
     NEXT,

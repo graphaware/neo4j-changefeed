@@ -7,7 +7,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import java.util.Map;
 
 /**
- * Bootstraps the ChangeFeedModule
+ * Bootstraps the {@link ChangeFeedModule}
  */
 public class ChangeFeedModuleBootstrapper implements GraphAwareRuntimeModuleBootstrapper {
 

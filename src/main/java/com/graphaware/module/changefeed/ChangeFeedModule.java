@@ -27,12 +27,12 @@ public class ChangeFeedModule extends BaseGraphAwareRuntimeModule {
 
     public ChangeFeedModule(String moduleId, GraphDatabaseService database, Map<String, String> config) {
         super(moduleId);
-        LOG.info("****** in the constructor");
         if (config.get("maxChanges") != null) {
             maxChanges = Integer.parseInt(config.get("maxChanges"));
+            LOG.info("MaxChanges set to {}", maxChanges);
         }
         sequence=new AtomicInteger(0);
-        /*int startSequence = 0;
+        /*int startSequence = 0;   //TODO put this in the right place
         try (Transaction tx = database.beginTx()) {
             Node result = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
             if (result != null) {
@@ -57,8 +57,9 @@ public class ChangeFeedModule extends BaseGraphAwareRuntimeModule {
         try (Transaction tx = database.beginTx()) {
             Node result = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
             if (result == null) {
+                LOG.info("Creating the ChangeFeed root");
                 database.createNode(Labels.ChangeFeed);
-            } else {
+            } else {    //TODO doesn't seem to be the right place to put this. Figure it out asap. Till then, the sequence will be screwed up on restart of neo4j
                 Relationship nextRel = result.getSingleRelationship(Relationships.NEXT, Direction.OUTGOING);
                 if (nextRel != null) {
                     startSequence = (Integer) nextRel.getEndNode().getProperty("sequence");
@@ -71,11 +72,6 @@ public class ChangeFeedModule extends BaseGraphAwareRuntimeModule {
         super.initialize(database);
     }
 
-    @Override
-    public void reinitialize(GraphDatabaseService database) {
-        LOG.info("Reinitialized ChangeFeedModule");
-        super.reinitialize(database);
-    }
 
     @Override
     public void beforeCommit(ImprovedTransactionData transactionData) {   //TODO this should be afterCommit

@@ -3,6 +3,8 @@ package com.graphaware.module.changefeed;
 import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.graphdb.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -11,24 +13,35 @@ import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
- * Created by luanne on 04/07/14.
+ * Keeps track of changes made to the graph
  */
 public class ChangeFeed {
 
     private final int maxChanges;
     private final GraphDatabaseService database;
     private final ExecutionEngine executionEngine;
+    private static final Logger LOG = LoggerFactory.getLogger(ChangeFeed.class);
 
     public ChangeFeed(GraphDatabaseService database) {
         this.maxChanges=ChangeFeedModule.getMaxChanges();
+        LOG.info("Max changes is {}",maxChanges);
         this.database = database;
         executionEngine = new ExecutionEngine(database);
     }
 
+    /**
+     * Get a list of changes made to the graph, where each item represents all changes made within a transaction.
+     * @return List of {@link ChangeSet}, latest change first
+     */
     public List<ChangeSet> getChanges() {
        return getChanges(null);
     }
 
+    /**
+     * Get a list of changes made to the graph since a known change
+     * @param since sequence number of a known change. All changes with sequence number greater than this parameter are returned.
+     * @return List of {@link ChangeSet}, latest change first
+     */
     public List<ChangeSet> getChanges(Integer since) {
         List<ChangeSet> changefeed = new ArrayList<>();
         ExecutionResult result;
@@ -61,6 +74,7 @@ public class ChangeFeed {
         try (Transaction tx=database.beginTx()) {
             Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
             if (changeRoot == null) {
+                LOG.error("ChangeFeedModule not initialized!");
                 throw new RuntimeException("Module not initialized"); //TODO throw the right exception
             }
             tx.acquireWriteLock(changeRoot);

@@ -12,7 +12,7 @@ import java.util.Deque;
 import java.util.List;
 
 /**
- * Created by luanne on 02/07/14.
+ * REST API for {@link ChangeFeed}.
  */
 @Controller
 @RequestMapping("/changefeed")
@@ -27,6 +27,11 @@ public class ChangeFeedApi {
     }
 
 
+    /**
+     * Get a list of changes made to the graph, where each item represents all changes made within a transaction.
+     * @param since sequence number (optional). All changes with sequence number greater than this parameter are returned.
+     * @return List of {@link com.graphaware.module.changefeed.ChangeSet}, latest change first
+     */
     @RequestMapping(method = RequestMethod.GET)
     @ResponseBody
     public List<ChangeSet> getChangeFeed(@RequestParam(value = "since", required = false) Integer since) {
