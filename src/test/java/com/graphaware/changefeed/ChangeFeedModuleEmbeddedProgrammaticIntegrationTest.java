@@ -2,7 +2,7 @@ package com.graphaware.changefeed;
 
 import com.graphaware.module.changefeed.*;
 import com.graphaware.runtime.GraphAwareRuntime;
-import com.graphaware.runtime.ProductionGraphAwareRuntime;
+import com.graphaware.runtime.GraphAwareRuntimeFactory;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
@@ -30,7 +30,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
     @Before
     public void setUp() {
         database = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        GraphAwareRuntime runtime = new ProductionGraphAwareRuntime(database);
+        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database);
         Map<String, String> config = new HashMap<>();
         config.put("maxChanges", "3");
 

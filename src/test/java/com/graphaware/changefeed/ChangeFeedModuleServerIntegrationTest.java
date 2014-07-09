@@ -11,8 +11,12 @@ import static com.graphaware.test.util.TestUtils.get;
 
 public class ChangeFeedModuleServerIntegrationTest extends NeoServerIntegrationTest {
 
-    public ChangeFeedModuleServerIntegrationTest() {
-        super("neo4j-changefeed.properties");
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected String neo4jConfigFile() {
+        return "neo4j-changefeed.properties";
     }
 
     @Test

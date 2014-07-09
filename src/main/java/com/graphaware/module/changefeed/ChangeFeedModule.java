@@ -1,6 +1,6 @@
 package com.graphaware.module.changefeed;
 
-import com.graphaware.runtime.BaseGraphAwareRuntimeModule;
+import com.graphaware.runtime.module.BaseTxDrivenModule;
 import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
 import org.neo4j.graphdb.*;
 import org.slf4j.Logger;
@@ -13,9 +13,9 @@ import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
- * {@link com.graphaware.runtime.GraphAwareRuntimeModule} that keeps track of changes in the graph
+ * A GraphAware Transaction Driven runtime module that keeps track of changes in the graph
  */
-public class ChangeFeedModule extends BaseGraphAwareRuntimeModule {
+public class ChangeFeedModule extends BaseTxDrivenModule<ChangeSet> {
 
     private static final int MAX_CHANGES_DEFAULT = 50;
     private static int maxChanges = MAX_CHANGES_DEFAULT;
@@ -74,12 +74,20 @@ public class ChangeFeedModule extends BaseGraphAwareRuntimeModule {
 
 
     @Override
-    public void beforeCommit(ImprovedTransactionData transactionData) {   //TODO this should be afterCommit
+    public ChangeSet beforeCommit(ImprovedTransactionData transactionData) {
+        ChangeSet changeSet=null;
         if (transactionData.mutationsOccurred()) {
-            ChangeSet changeset = new ChangeSet();
-            changeset.getChanges().addAll(transactionData.mutationsToStrings());
-            changeset.setSequence(sequence.incrementAndGet());
-            changeFeed.recordChange(changeset);
+            changeSet = new ChangeSet();
+            changeSet.getChanges().addAll(transactionData.mutationsToStrings());
         }
+        return changeSet;
+    }
+
+    @Override
+    public void afterCommit(ChangeSet changeSet) {
+      if(changeSet!=null) {
+          changeSet.setSequence(sequence.incrementAndGet());
+          changeFeed.recordChange(changeSet);
+      }
     }
 }
