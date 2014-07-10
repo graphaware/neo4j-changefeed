@@ -111,7 +111,7 @@
             <scope>test</scope>
         </dependency>
 
-    <!-- Testing -->
+        <!-- Testing -->
         <dependency>
             <groupId>com.graphaware.neo4j</groupId>
             <artifactId>server-community</artifactId>
