@@ -78,7 +78,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> {
         if (transactionData.mutationsOccurred()) {
             ChangeSet changeSet = new ChangeSet();
             changeSet.getChanges().addAll(transactionData.mutationsToStrings());
-            changeSet.setSequence(sequence.incrementAndGet());
+            changeSet.setSequence(sequence.incrementAndGet()); //TODO might this result in holes if a transaction fails to commit?
             changeFeed.recordChange(changeSet);
         }
         return null;
