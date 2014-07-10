@@ -15,7 +15,7 @@ import static org.neo4j.tooling.GlobalGraphOperations.at;
 /**
  * A GraphAware Transaction Driven runtime module that keeps track of changes in the graph
  */
-public class ChangeFeedModule extends BaseTxDrivenModule<ChangeSet> {
+public class ChangeFeedModule extends BaseTxDrivenModule<Void> {
 
     private static final int MAX_CHANGES_DEFAULT = 50;
     private static int maxChanges = MAX_CHANGES_DEFAULT;
@@ -74,20 +74,19 @@ public class ChangeFeedModule extends BaseTxDrivenModule<ChangeSet> {
 
 
     @Override
-    public ChangeSet beforeCommit(ImprovedTransactionData transactionData) {
-        ChangeSet changeSet=null;
+    public Void beforeCommit(ImprovedTransactionData transactionData) {
         if (transactionData.mutationsOccurred()) {
-            changeSet = new ChangeSet();
+            ChangeSet changeSet = new ChangeSet();
             changeSet.getChanges().addAll(transactionData.mutationsToStrings());
+            changeSet.setSequence(sequence.incrementAndGet());
+            changeFeed.recordChange(changeSet);
         }
-        return changeSet;
+        return null;
     }
 
     @Override
-    public void afterCommit(ChangeSet changeSet) {
-      if(changeSet!=null) {
-          changeSet.setSequence(sequence.incrementAndGet());
-          changeFeed.recordChange(changeSet);
-      }
+    public void afterCommit(Void state) {
+
     }
+
 }
