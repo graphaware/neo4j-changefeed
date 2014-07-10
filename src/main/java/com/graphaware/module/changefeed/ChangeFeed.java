@@ -83,8 +83,19 @@ public class ChangeFeed {
             }
             tx.success();
         }
+        catch (Exception e) {
+            LOG.error("Could not fetch changeFeed on first attempt",e);
+            try {
+                changefeed=getChanges(since);
+            }
+            catch (Exception e2) {
+                LOG.error("Could not fetch changeFeed on second attempt",e2);
+                throw new RuntimeException("ChangeFeed unavailable"); //TODO throw the right exception
+            }
+        }
         return changefeed;
     }
+
 
     public void recordChange(ChangeSet changeSet) {
         try (Transaction tx = database.beginTx()) {
@@ -112,28 +123,6 @@ public class ChangeFeed {
             }
             changeRoot.createRelationshipTo(changeNode, Relationships.NEXT);
 
-            //Now prune the feed, make it async
-           /* int highSequence=changeSet.getSequence();
-            Node oldestNode=changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE,Direction.OUTGOING).getEndNode();
-            int lowSequence=(int)oldestNode.getProperty("sequence");
-            int nodesToDelete=((highSequence-lowSequence) + 1) - maxChanges;
-            Node newOldestNode=null;
-            boolean deleteNodes=false;
-            if(nodesToDelete>0) {
-                changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE,Direction.OUTGOING).delete();
-                deleteNodes=true;
-            }
-            while (nodesToDelete>0) {
-                Relationship rel  = oldestNode.getSingleRelationship(Relationships.NEXT,Direction.INCOMING);
-                newOldestNode=rel.getEndNode();
-                rel.delete();
-                oldestNode.delete();
-                oldestNode=newOldestNode;
-                nodesToDelete--;
-            }
-            if(deleteNodes) {
-                changeRoot.createRelationshipTo(newOldestNode,Relationships.OLDEST_CHANGE);
-            }*/
             tx.success();
         }
 

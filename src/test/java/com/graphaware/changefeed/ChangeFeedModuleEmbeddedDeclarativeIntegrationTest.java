@@ -74,19 +74,19 @@ public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest {
 
         ChangeSet set1 = changes.get(0);
         Date set1Date = set1.getChangeDate();
-        Assert.assertTrue(set1.getChanges().size() == 2);
+        Assert.assertEquals(2,set1.getChanges().size());
         Assert.assertTrue(set1.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         Assert.assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
 
 
         ChangeSet set2 = changes.get(1);
         Date set2Date = set2.getChangeDate();
-        Assert.assertTrue(set2.getChanges().size() == 1);
+        Assert.assertEquals(1,set2.getChanges().size());
         Assert.assertTrue(set2.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
 
         ChangeSet set3 = changes.get(2);
         Date set3Date = set3.getChangeDate();
-        Assert.assertTrue(set3.getChanges().size() == 3);
+        Assert.assertEquals(3,set3.getChanges().size());
         Assert.assertTrue(set3.getChanges().contains("Created node (:Company)"));
         Assert.assertTrue(set3.getChanges().contains("Created node (:Person {name: MB})"));
         Assert.assertTrue(set3.getChanges().contains("Created relationship (:Person {name: MB})-[:WORKS_AT]->(:Company)"));

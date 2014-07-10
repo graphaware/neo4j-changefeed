@@ -111,4 +111,42 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> {
 
     }
 
+   /* @Override
+    public NodeBasedContext createInitialContext(GraphDatabaseService database) {
+        return null;
+    }
+
+    @Override
+    public NodeBasedContext doSomeWork(NodeBasedContext lastContext, GraphDatabaseService database) {
+       *//* Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
+
+        Node oldestNode = changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE, Direction.OUTGOING).getEndNode();
+        Node newestNode = changeRoot.getSingleRelationship(Relationships.NEXT,Direction.OUTGOING).getEndNode();
+        if(newestNode!=null) {
+            int highSequence = (int) newestNode.getProperty("sequence");
+            int lowSequence = (int) oldestNode.getProperty("sequence");
+            int nodesToDelete = ((highSequence - lowSequence) + 1) - maxChanges;
+            Node newOldestNode = null;
+            boolean deleteNodes = false;
+            if (nodesToDelete > 0) {
+                LOG.debug("Preparing to prune change feed by deleting {} nodes",nodesToDelete);
+                changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE, Direction.OUTGOING).delete();
+                deleteNodes = true;
+            }
+            while (nodesToDelete > 0) {
+                Relationship rel = oldestNode.getSingleRelationship(Relationships.NEXT, Direction.INCOMING);
+                newOldestNode = rel.getEndNode();
+                rel.delete();
+                oldestNode.delete();
+                oldestNode = newOldestNode;
+                nodesToDelete--;
+            }
+            if (deleteNodes) {
+                changeRoot.createRelationshipTo(newOldestNode, Relationships.OLDEST_CHANGE);
+                LOG.debug("ChangeFeed pruning complete");
+            }
+        }
+*//*
+        return null;
+    }*/
 }
