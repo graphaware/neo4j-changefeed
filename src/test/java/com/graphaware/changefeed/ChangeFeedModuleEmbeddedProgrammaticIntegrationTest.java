@@ -254,7 +254,16 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
     @Test
     public void transactionsNotCommittedShouldNotReflectInTheChangeFeed() {
         Node node1, node2;
+
         try (Transaction tx = database.beginTx()) {
+            database.schema()
+                    .constraintFor(DynamicLabel.label("Person"))
+                    .assertPropertyIsUnique("name")
+                    .create();
+            tx.success();
+        }
+        try (Transaction tx = database.beginTx()) {
+
             node1 = database.createNode();
             node1.setProperty("name", "MB");
             node1.addLabel(DynamicLabel.label("Person"));
@@ -271,7 +280,15 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             tx.failure();
         }
 
-
+        try (Transaction tx = database.beginTx()) {
+            Node node3 = database.createNode();
+            node3.setProperty("name", "MB");
+            node3.addLabel(DynamicLabel.label("Person"));
+            tx.success();
+        }
+        catch (Exception e) {
+            //tx will fail due to unique constraint violation, swallow the exception and check the feed
+        }
         try (Transaction tx = database.beginTx()) {
             node1.setProperty("name", "Michal");
             tx.success();

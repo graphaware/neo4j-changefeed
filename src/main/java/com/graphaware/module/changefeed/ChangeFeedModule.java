@@ -39,7 +39,8 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> {
 
 
     private final ChangeFeed changeFeed;
-    private AtomicInteger sequence;
+    private AtomicInteger sequence = null;
+    private GraphDatabaseService database;
 
     public ChangeFeedModule(String moduleId, GraphDatabaseService database, Map<String, String> config) {
         super(moduleId);
@@ -47,19 +48,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> {
             maxChanges = Integer.parseInt(config.get("maxChanges"));
             LOG.info("MaxChanges set to {}", maxChanges);
         }
-        sequence = new AtomicInteger(0);
-        /*int startSequence = 0;   //TODO put this in the right place
-        try (Transaction tx = database.beginTx()) {
-            Node result = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
-            if (result != null) {
-                Relationship nextRel = result.getSingleRelationship(Relationships.NEXT, Direction.OUTGOING);
-                if (nextRel != null) {
-                    startSequence = (Integer) nextRel.getEndNode().getProperty("sequence");
-                }
-            }
-            sequence = new AtomicInteger(startSequence);
-            tx.success();
-        }*/
+        this.database = database;
         this.changeFeed = new ChangeFeed(database);
     }
 
@@ -91,6 +80,23 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> {
 
     @Override
     public Void beforeCommit(ImprovedTransactionData transactionData) {
+        if (sequence == null) {
+            synchronized (this) {
+                if (sequence == null) {
+                    int startSequence = 0;   //TODO put this in the right place
+                    Node result = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
+                    if (result != null) {
+                        Relationship nextRel = result.getSingleRelationship(Relationships.NEXT, Direction.OUTGOING);
+                        if (nextRel != null) {
+                            startSequence = (Integer) nextRel.getEndNode().getProperty("sequence");
+                        }
+                    }
+                    sequence = new AtomicInteger(startSequence);
+                }
+            }
+        }
+
+
         if (transactionData.mutationsOccurred()) {
             ChangeSet changeSet = new ChangeSet();
             changeSet.getChanges().addAll(transactionData.mutationsToStrings());
