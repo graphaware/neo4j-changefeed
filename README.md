@@ -66,6 +66,7 @@ The REST API a JSON array of changesets. A changeset contains the following:
 * changeDateFormatted- a human readable representation of changeDate of the format yyyy-MM-dd HH:mm:ss.SSSZ
 
 e.g.
+```json
 [
     {
         "sequence": 7,
@@ -84,7 +85,7 @@ e.g.
         "changeDateFormatted": "2014-07-11 16:31:53.162+0530"
     }
 ]
-
+```
 ### Java API
 
 Java API has the same functionality as the rest API. Please refer to the Javadoc (link it)
