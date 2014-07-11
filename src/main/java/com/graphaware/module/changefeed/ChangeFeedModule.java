@@ -58,14 +58,15 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         }
         this.database = database;
         this.changeFeed = new ChangeFeed(database);
-        //only take into account relationships with FRIEND_OF type:
+
+        //Do not record changes for nodes and relationships that belong to the changefeed
         configuration = new MinimalTxDrivenModuleConfiguration(
                 InclusionStrategiesFactory.allBusiness()
                         .with(
                                 new RelationshipInclusionStrategy() {
                                     @Override
                                     public boolean include(Relationship rel) {
-                                        return !(rel.isType(Relationships.NEXT) || rel.isType(Relationships.OLDEST_CHANGE));
+                                        return !(rel.isType(Relationships.NEXT_CHANGE) || rel.isType(Relationships.OLDEST_CHANGE));
                                     }
                                 }
                         )
@@ -79,25 +80,23 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
                         ));
     }
 
+    /**
+     * Get the maximum number of changes to be maintained in the feed
+     *
+     * @return max changes
+     */
     public static int getMaxChanges() {
         return maxChanges;
     }
 
     @Override
     public void initialize(GraphDatabaseService database) {
-        int startSequence = 0;
         try (Transaction tx = database.beginTx()) {
             Node result = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
             if (result == null) {
                 LOG.info("Creating the ChangeFeed root");
                 database.createNode(Labels.ChangeFeed);
-            } else {    //TODO doesn't seem to be the right place to put this. Figure it out asap. Till then, the sequence will be screwed up on restart of neo4j
-                Relationship nextRel = result.getSingleRelationship(Relationships.NEXT, Direction.OUTGOING);
-                if (nextRel != null) {
-                    startSequence = (Integer) nextRel.getEndNode().getProperty("sequence");
-                }
             }
-            sequence = new AtomicInteger(startSequence);
             tx.success();
         }
         LOG.info("Initialized ChangeFeedModule");
@@ -115,13 +114,13 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
 
     @Override
     public Void beforeCommit(ImprovedTransactionData transactionData) {
-        if (sequence == null) {
+        if (sequence == null) { //Initialize the sequence if not already done.
             synchronized (this) {
                 if (sequence == null) {
-                    int startSequence = 0;   //TODO put this in the right place
+                    int startSequence = 0;
                     Node result = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
                     if (result != null) {
-                        Relationship nextRel = result.getSingleRelationship(Relationships.NEXT, Direction.OUTGOING);
+                        Relationship nextRel = result.getSingleRelationship(Relationships.NEXT_CHANGE, Direction.OUTGOING);
                         if (nextRel != null) {
                             startSequence = (Integer) nextRel.getEndNode().getProperty("sequence");
                         }
@@ -133,10 +132,9 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
 
 
         if (transactionData.mutationsOccurred()) {
-            LOG.info("****** {}", transactionData.mutationsToStrings());
             ChangeSet changeSet = new ChangeSet();
             changeSet.getChanges().addAll(transactionData.mutationsToStrings());
-            changeSet.setSequence(sequence.incrementAndGet()); //TODO might this result in holes if a transaction fails to commit?
+            changeSet.setSequence(sequence.incrementAndGet()); //TODO might this result in holes if a runtime exception is thrown at the end of this module or any other
             changeFeed.recordChange(changeSet);
         }
         return null;
@@ -156,9 +154,10 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
 
     @Override
     public PruningNodeContext doSomeWork(PruningNodeContext lastContext, GraphDatabaseService database) {
-        final int MAX_FEED_LENGTH_EXCEEDED = 3;
 
         Node changeRoot = lastContext.find(database);
+
+        //State maintenance necessary as a workaround for timer modules being invoked even if the previous work is incomplete
         synchronized (mutex) {
             switch (lastContext.getState()) {
                 case RUNNING:
@@ -170,10 +169,19 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
                     lastContext.setState(PruningNodeContext.State.RUNNING);
             }
         }
+
+        pruneChangeFeed(changeRoot);
+        lastContext.setState(PruningNodeContext.State.NOT_RUNNING);
+        return lastContext;
+    }
+
+    private void pruneChangeFeed(Node changeRoot) {
+        final int MAX_FEED_LENGTH_EXCEEDED = 3;
+
         Relationship oldestChangeRel = changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE, Direction.OUTGOING);
         if (oldestChangeRel != null) {
             Node oldestNode = oldestChangeRel.getEndNode();
-            Node newestNode = changeRoot.getSingleRelationship(Relationships.NEXT, Direction.OUTGOING).getEndNode();
+            Node newestNode = changeRoot.getSingleRelationship(Relationships.NEXT_CHANGE, Direction.OUTGOING).getEndNode();
             if (newestNode != null) {
                 int highSequence = (int) newestNode.getProperty("sequence");
                 int lowSequence = (int) oldestNode.getProperty("sequence");
@@ -183,7 +191,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
                     LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
                     changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE, Direction.OUTGOING).delete();
                     while (nodesToDelete > 0) {
-                        Relationship rel = oldestNode.getSingleRelationship(Relationships.NEXT, Direction.INCOMING);
+                        Relationship rel = oldestNode.getSingleRelationship(Relationships.NEXT_CHANGE, Direction.INCOMING);
                         newOldestNode = rel.getStartNode();
                         rel.delete();
                         oldestNode.delete();
@@ -195,7 +203,5 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
                 }
             }
         }
-        lastContext.setState(PruningNodeContext.State.NOT_RUNNING);
-        return lastContext;
     }
 }

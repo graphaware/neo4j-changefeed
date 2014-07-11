@@ -22,6 +22,6 @@ import org.neo4j.graphdb.RelationshipType;
  * Relationships used by the ChangeFeed module
  */
 public enum Relationships implements RelationshipType {
-    NEXT,
+    NEXT_CHANGE,
     OLDEST_CHANGE
 }

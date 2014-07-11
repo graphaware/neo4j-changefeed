@@ -39,7 +39,6 @@ public class ChangeFeed {
 
     public ChangeFeed(GraphDatabaseService database) {
         this.maxChanges = ChangeFeedModule.getMaxChanges();
-        LOG.info("Max changes is {}", maxChanges);
         this.database = database;
         executionEngine = new ExecutionEngine(database);
     }
@@ -62,8 +61,8 @@ public class ChangeFeed {
     public List<ChangeSet> getChanges(Integer since) {
         List<ChangeSet> changefeed = new ArrayList<>();
         ExecutionResult result;
-        String getChangesQuery = "match (root:ChangeFeed)-[:NEXT*.." + maxChanges + "]->(change) return change";
-        String getChangesSinceQuery = "match (startChange:ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:NEXT*..]-(change:ChangeSet) return change order by change.sequence desc";
+        String getChangesQuery = "match (root:ChangeFeed)-[:NEXT_CHANGE*.." + maxChanges + "]->(change) return change";
+        String getChangesSinceQuery = "match (startChange:ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:NEXT_CHANGE*..]-(change:ChangeSet) return change order by change.sequence desc";
         try (Transaction tx = database.beginTx()) {
             if (since == null) {
                 result = executionEngine.execute(getChangesQuery);
@@ -82,27 +81,28 @@ public class ChangeFeed {
                 changefeed.add(changeSet);
             }
             tx.success();
-        }
-        catch (Exception e) {
-            LOG.error("Could not fetch changeFeed on first attempt",e);
+        } catch (Exception e) {
+            LOG.error("Could not fetch changeFeed on first attempt", e);
             try {
-                changefeed=getChanges(since);
-            }
-            catch (Exception e2) {
-                LOG.error("Could not fetch changeFeed on second attempt",e2);
-                throw new RuntimeException("ChangeFeed unavailable"); //TODO throw the right exception
+                changefeed = getChanges(since);
+            } catch (Exception e2) {     //We hope not to reach here
+                LOG.error("Could not fetch changeFeed on second attempt", e2);
             }
         }
         return changefeed;
     }
 
-
+    /**
+     * Persist the ChangeSet in the graph
+     *
+     * @param changeSet the ChangeSet to be persisted
+     */
     public void recordChange(ChangeSet changeSet) {
         try (Transaction tx = database.beginTx()) {
             Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
             if (changeRoot == null) {
                 LOG.error("ChangeFeedModule not initialized!");
-                throw new RuntimeException("Module not initialized"); //TODO throw the right exception
+                throw new IllegalStateException("Module not initialized");
             }
             tx.acquireWriteLock(changeRoot);
             Node changeNode = database.createNode();
@@ -112,16 +112,17 @@ public class ChangeFeed {
             changeNode.setProperty("changes", changeSetChanges.toArray(new String[changeSetChanges.size()]));
             changeNode.addLabel(Labels.ChangeSet);
 
-            Relationship firstChangeRel = changeRoot.getSingleRelationship(Relationships.NEXT, Direction.OUTGOING);
-            if (firstChangeRel != null) {
+            Relationship firstChangeRel = changeRoot.getSingleRelationship(Relationships.NEXT_CHANGE, Direction.OUTGOING);
+            if (firstChangeRel == null) { //First changeSet recorded, create an OLDEST_CHANGE relation from the root to it
+                changeRoot.createRelationshipTo(changeNode, Relationships.OLDEST_CHANGE);
+            } else {
                 Node firstChange = firstChangeRel.getEndNode();
                 tx.acquireWriteLock(firstChange);
-                changeNode.createRelationshipTo(firstChange, Relationships.NEXT);
+                changeNode.createRelationshipTo(firstChange, Relationships.NEXT_CHANGE);
                 firstChangeRel.delete();
-            } else {
-                changeRoot.createRelationshipTo(changeNode, Relationships.OLDEST_CHANGE);
             }
-            changeRoot.createRelationshipTo(changeNode, Relationships.NEXT);
+
+            changeRoot.createRelationshipTo(changeNode, Relationships.NEXT_CHANGE);
 
             tx.success();
         }

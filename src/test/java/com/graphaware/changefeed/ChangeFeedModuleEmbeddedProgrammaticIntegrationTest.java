@@ -315,4 +315,5 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     }
 
+    //TODO write a test for feed pruning
 }
