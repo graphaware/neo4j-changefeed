@@ -1,11 +1,17 @@
 package com.graphaware.module.changefeed;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * A repository of {@link ChangeSet}s.
  */
 public interface ChangeRepository {
+
+    /**
+     * Initialize the repository before it can be used.
+     */
+    void initialize();
 
     /**
      * Get all changes.
@@ -41,9 +47,16 @@ public interface ChangeRepository {
     List<ChangeSet> getNumberOfChangesSince(int since, int limit);
 
     /**
-     * Record (persist) a change.
+     * Record (persist) a set of changes.
      *
-     * @param changeSet to record.
+     * @param changes to record.
      */
-    void recordChange(ChangeSet changeSet);
+    void recordChanges(Set<String> changes);
+
+    /**
+     * Prune the changes, only keeping the specified number of latest changes.
+     *
+     * @param keep number of changes to keep.
+     */
+    void pruneChanges(int keep);
 }

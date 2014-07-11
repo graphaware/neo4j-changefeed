@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import static com.graphaware.test.util.TestUtils.executeCypher;
 import static com.graphaware.test.util.TestUtils.get;
+import static junit.framework.Assert.*;
 
 
 public class ChangeFeedModuleServerIntegrationTest extends NeoServerIntegrationTest {
@@ -38,7 +39,7 @@ public class ChangeFeedModuleServerIntegrationTest extends NeoServerIntegrationT
     @Test
     public void graphChangesShouldAppearInChangeFeed() {
         executeCypher(baseUrl(), "CREATE (p:Person {name: 'MB'})");
-        Assert.assertTrue(get(baseUrl() + "/graphaware/changefeed", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
+        assertTrue(get(baseUrl() + "/graphaware/changefeed", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
 
 
     }

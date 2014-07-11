@@ -23,8 +23,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
+import static com.graphaware.module.changefeed.Labels.*;
+import static com.graphaware.module.changefeed.Properties.*;
+import static com.graphaware.module.changefeed.Relationships.GA_CHANGEFEED_NEXT_CHANGE;
+import static com.graphaware.module.changefeed.Relationships.GA_CHANGEFEED_OLDEST_CHANGE;
+import static org.neo4j.graphdb.Direction.INCOMING;
+import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
@@ -32,11 +39,15 @@ import static org.neo4j.tooling.GlobalGraphOperations.at;
  */
 public class GraphChangeRepository implements ChangeRepository {
 
-    private final GraphDatabaseService database;
-    private final ExecutionEngine executionEngine;
     private static final Logger LOG = LoggerFactory.getLogger(GraphChangeRepository.class);
 
     private static final String CHANGES_SINCE_QUERY = "match (startChange:_GA_ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:GA_CHANGEFEED_NEXT_CHANGE*..]-(change:_GA_ChangeSet) return change order by change.sequence desc";
+
+    private final GraphDatabaseService database;
+    private final ExecutionEngine executionEngine;
+
+    private AtomicInteger sequence = null;
+    private Node root;
 
     /**
      * Construct a new repository.
@@ -52,8 +63,17 @@ public class GraphChangeRepository implements ChangeRepository {
      * {@inheritDoc}
      */
     @Override
+    public void initialize() {
+        root = getOrCreateRoot();
+        initializeSequence();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public List<ChangeSet> getAllChanges() {
-        return getChanges("match (root:_GA_ChangeFeed)-[:GA_CHANGEFEED_NEXT_CHANGE*.." + Integer.MAX_VALUE + "]->(change) return change",  Collections.<String, Object>emptyMap());
+        return getChanges("match (root:_GA_ChangeFeed)-[:GA_CHANGEFEED_NEXT_CHANGE*.." + Integer.MAX_VALUE + "]->(change) return change", Collections.<String, Object>emptyMap());
     }
 
     /**
@@ -70,7 +90,7 @@ public class GraphChangeRepository implements ChangeRepository {
     @Override
     public List<ChangeSet> getChangesSince(int since) {
         Map<String, Object> params = new HashMap<>();
-        params.put("sequence", since);
+        params.put(SEQUENCE, since);
         return getChanges(CHANGES_SINCE_QUERY, params);
     }
 
@@ -83,18 +103,17 @@ public class GraphChangeRepository implements ChangeRepository {
     }
 
     private List<ChangeSet> getChanges(String query, Map<String, Object> params) {
-         try {
-             return doGetChanges(query, params);
-         }
-         catch (Exception e) {
-             LOG.error("Could not fetch changeFeed on first attempt", e);
-             try {
-                 return doGetChanges(query, params);
-             } catch (Exception e2) {     //We hope not to reach here
-                 LOG.error("Could not fetch changeFeed on second attempt", e2);
-                 throw e2;
-             }
-         }
+        try {
+            return doGetChanges(query, params);
+        } catch (Exception e) {
+            LOG.error("Could not fetch changeFeed on first attempt", e);
+            try {
+                return doGetChanges(query, params);
+            } catch (Exception e2) {     //We hope not to reach here
+                LOG.error("Could not fetch changeFeed on second attempt", e2);
+                throw e2;
+            }
+        }
 
     }
 
@@ -111,13 +130,11 @@ public class GraphChangeRepository implements ChangeRepository {
         ExecutionResult result;
         try (Transaction tx = database.beginTx()) {
             result = executionEngine.execute(query, params);
-            Iterator<Node> resultsIt = result.columnAs("change");
-            while (resultsIt.hasNext()) {
-                Node changeNode = resultsIt.next();
-                ChangeSet changeSet = new ChangeSet();
-                changeSet.setSequence((Integer) changeNode.getProperty("sequence"));
-                changeSet.setChangeDate(new Date((Long) changeNode.getProperty("changeDate")));
-                changeSet.setChanges(Arrays.asList((String[]) changeNode.getProperty("changes")));
+            Iterator<Node> changeNodes = result.columnAs("change");
+            while (changeNodes.hasNext()) {
+                Node changeNode = changeNodes.next();
+                ChangeSet changeSet = new ChangeSet((long) changeNode.getProperty(SEQUENCE), (long) changeNode.getProperty(TIMESTAMP));
+                changeSet.addChanges((String[]) changeNode.getProperty(CHANGES));
                 changefeed.add(changeSet);
             }
             tx.success();
@@ -130,24 +147,25 @@ public class GraphChangeRepository implements ChangeRepository {
      * {@inheritDoc}
      */
     @Override
-    public void recordChange(ChangeSet changeSet) {
-        try (Transaction tx = database.beginTx()) {
-            Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
-            if (changeRoot == null) {
-                LOG.error("ChangeFeedModule not initialized!");
-                throw new IllegalStateException("Module not initialized");
-            }
-            tx.acquireWriteLock(changeRoot);
-            Node changeNode = database.createNode();
-            changeNode.setProperty("sequence", changeSet.getSequence());
-            changeNode.setProperty("changeDate", changeSet.getChangeDate().getTime());
-            List<String> changeSetChanges = changeSet.getChanges();
-            changeNode.setProperty("changes", changeSetChanges.toArray(new String[changeSetChanges.size()]));
-            changeNode.addLabel(Labels._GA_ChangeSet);
+    public void recordChanges(Set<String> changes) {
+        ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet()); //TODO might this result in holes if a runtime exception is thrown at the end of this module or any other
+        changeSet.addChanges(changes);
+        recordChange(changeSet);
+    }
 
-            Relationship firstChangeRel = changeRoot.getSingleRelationship(Relationships.GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
+    private void recordChange(ChangeSet changeSet) {
+        try (Transaction tx = database.beginTx()) {
+
+            Node changeNode = database.createNode(_GA_ChangeSet);
+            changeNode.setProperty(SEQUENCE, changeSet.getSequence());
+            changeNode.setProperty(TIMESTAMP, changeSet.getTimestamp());
+            changeNode.setProperty(CHANGES, changeSet.getChangesAsArray());
+
+            tx.acquireWriteLock(getRoot());
+
+            Relationship firstChangeRel = getRoot().getSingleRelationship(Relationships.GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
             if (firstChangeRel == null) { //First changeSet recorded, create an GA_CHANGEFEED_OLDEST_CHANGE relation from the root to it
-                changeRoot.createRelationshipTo(changeNode, Relationships.GA_CHANGEFEED_OLDEST_CHANGE);
+                getRoot().createRelationshipTo(changeNode, Relationships.GA_CHANGEFEED_OLDEST_CHANGE);
             } else {
                 Node firstChange = firstChangeRel.getEndNode();
                 tx.acquireWriteLock(firstChange);
@@ -155,10 +173,93 @@ public class GraphChangeRepository implements ChangeRepository {
                 firstChangeRel.delete();
             }
 
-            changeRoot.createRelationshipTo(changeNode, Relationships.GA_CHANGEFEED_NEXT_CHANGE);
+            getRoot().createRelationshipTo(changeNode, Relationships.GA_CHANGEFEED_NEXT_CHANGE);
 
             tx.success();
         }
+    }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void pruneChanges(int keep) {
+        final int MAX_FEED_LENGTH_EXCEEDED = 3;
+
+        Relationship oldestChangeRel = getRoot().getSingleRelationship(GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING);
+        if (oldestChangeRel != null) {
+            Node oldestNode = oldestChangeRel.getEndNode();
+            Node newestNode = getRoot().getSingleRelationship(GA_CHANGEFEED_NEXT_CHANGE, OUTGOING).getEndNode();
+            if (newestNode != null) {
+                long highSequence = (long) newestNode.getProperty(SEQUENCE);
+                long lowSequence = (long) oldestNode.getProperty(SEQUENCE);
+                long nodesToDelete = ((highSequence - lowSequence) + 1) - keep;
+                Node newOldestNode = null;
+                if (nodesToDelete > MAX_FEED_LENGTH_EXCEEDED) {
+                    LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
+                    getRoot().getSingleRelationship(GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING).delete();
+                    while (nodesToDelete > 0) {
+                        Relationship rel = oldestNode.getSingleRelationship(GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
+                        newOldestNode = rel.getStartNode();
+                        rel.delete();
+                        oldestNode.delete();
+                        oldestNode = newOldestNode;
+                        nodesToDelete--;
+                    }
+                    getRoot().createRelationshipTo(newOldestNode, GA_CHANGEFEED_OLDEST_CHANGE);
+                    LOG.info("_GA_ChangeFeed pruning complete");
+                }
+            }
+        }
+    }
+
+    /**
+     * Get or create the root of the change feed.
+     *
+     * @return root.
+     */
+    private Node getOrCreateRoot() {
+        Node root;
+
+        try (Transaction tx = database.beginTx()) {
+            root = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
+            if (root == null) {
+                LOG.info("Creating the ChangeFeed Root");
+                root = database.createNode(Labels._GA_ChangeFeed);
+            }
+            tx.success();
+        }
+
+        return root;
+    }
+
+    /**
+     * Get the root.
+     *
+     * @return root, will never be null.
+     */
+    private Node getRoot() {
+        if (root == null) {
+            throw new IllegalStateException("There is not ChangeFeed Root! This is a bug. It looks like the start() method hasn't been called.");
+        }
+        return root;
+    }
+
+    /**
+     * Initialize the sequence to the last used number. No need to synchronize, called from constructor,
+     * thus in a single thread.
+     */
+    private void initializeSequence() {
+        int startSequence = 0;
+
+        try (Transaction tx = database.beginTx()) {
+            Relationship nextRel = getRoot().getSingleRelationship(GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
+            if (nextRel != null) {
+                startSequence = (Integer) nextRel.getEndNode().getProperty(SEQUENCE);
+            }
+            tx.success();
+        }
+
+        sequence = new AtomicInteger(startSequence);
     }
 }

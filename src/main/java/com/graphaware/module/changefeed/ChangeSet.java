@@ -16,52 +16,100 @@
 
 package com.graphaware.module.changefeed;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * A set of changes applied on the graph in a single transaction.
+ * <p/>
+ * Note that the changes are organised in a list for predictable order (creates, then deletes, etc.), but the ordering
+ * within a particular change set does not resemble the real ordering of the operations in the transaction.
  */
 public class ChangeSet {
 
-    private int sequence;
-    private Date changeDate;
-    private List<String> changes = new ArrayList<>();
+    private final long sequence;
+    private final long timestamp;
+    private final List<String> changes = new LinkedList<>();
 
-
-    public ChangeSet() {
-        this.changeDate = new Date();
+    /**
+     * Construct a new change set with timestamp of now.
+     *
+     * @param sequence sequence number of the change set.
+     */
+    public ChangeSet(long sequence) {
+        this(sequence, new Date().getTime());
     }
 
-    public Date getChangeDate() {
-        return changeDate;
+    /**
+     * Construct a new change set.
+     *
+     * @param sequence  sequence number of the change set.
+     * @param timestamp of the change set.
+     */
+    public ChangeSet(long sequence, long timestamp) {
+        this.sequence = sequence;
+        this.timestamp = timestamp;
     }
 
-    public void setChangeDate(Date changeDate) {
-        this.changeDate = changeDate;
-    }
-
-    public List<String> getChanges() {
-        return changes;
-    }
-
-    public void setChanges(List<String> changes) {
-        this.changes = changes;
-    }
-
-    public String getChangeDateFormatted() {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ");
-        return dateFormat.format(changeDate);
-    }
-
-    public int getSequence() {
+    /**
+     * Get the sequence number of this change set.
+     *
+     * @return sequence number.
+     */
+    public long getSequence() {
         return sequence;
     }
 
-    public void setSequence(int sequence) {
-        this.sequence = sequence;
+    /**
+     * Get the timestamp of this change set.
+     *
+     * @return time when the transaction performing these changes started committing in ms since 1/1/1970.
+     */
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    /**
+     * Add a change to this change set.
+     *
+     * @param change to add.
+     */
+    public void addChange(String change) {
+        changes.add(change);
+    }
+
+    /**
+     * Add changes to this change set.
+     *
+     * @param changes to add.
+     */
+    public void addChanges(Collection<String> changes) {
+        this.changes.addAll(changes);
+    }
+
+    /**
+     * Add changes to this change set.
+     *
+     * @param changes to add.
+     */
+    public void addChanges(String... changes) {
+        this.changes.addAll(Arrays.asList(changes));
+    }
+
+    /**
+     * Get all the changes in this change set.
+     *
+     * @return all changes in a read-only list.
+     */
+    public List<String> getChanges() {
+        return Collections.unmodifiableList(changes);
+    }
+
+    /**
+     * Get all the changes in this change set.
+     *
+     * @return all changes in an array.
+     */
+    public String[] getChangesAsArray() {
+        return changes.toArray(new String[changes.size()]);
     }
 }

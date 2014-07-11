@@ -70,4 +70,30 @@ public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<Cha
     protected ChangeFeedConfiguration newInstance(InclusionStrategies inclusionStrategies) {
         return new ChangeFeedConfiguration(inclusionStrategies, getMaxChanges());
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+
+        ChangeFeedConfiguration that = (ChangeFeedConfiguration) o;
+
+        if (maxChanges != that.maxChanges) return false;
+
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + maxChanges;
+        return result;
+    }
 }

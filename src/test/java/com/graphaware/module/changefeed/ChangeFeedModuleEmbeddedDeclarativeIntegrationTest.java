@@ -16,8 +16,7 @@
 
 package com.graphaware.module.changefeed;
 
-import com.graphaware.module.changefeed.GraphChangeRepository;
-import com.graphaware.module.changefeed.ChangeSet;
+import com.graphaware.test.integration.DatabaseIntegrationTest;
 import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,42 +26,46 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 import java.util.Date;
 import java.util.List;
 
+import static junit.framework.Assert.*;
 
-public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest {
 
-    private GraphDatabaseService database;
+public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest extends DatabaseIntegrationTest {
+
     private GraphChangeRepository changeFeed;
 
-    @Before
-    public void setUp() {
-        database = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
+    @Override
+    protected GraphDatabaseService createDatabase() {
+        return new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
                 .loadPropertiesFromFile(this.getClass().getClassLoader().getResource("neo4j-changefeed.properties").getPath())
                 .newGraphDatabase();
-        changeFeed = new GraphChangeRepository(database);
     }
 
+    public void setUp() throws Exception {
+        super.setUp();
+        changeFeed = new GraphChangeRepository(getDatabase());
+    }
 
     @Test
     public void graphChangesShouldAppearInTheChangeFeed() {
         Node node1, node2;
-        try (Transaction tx = database.beginTx()) {
-            node1 = database.createNode();
+        try (Transaction tx = getDatabase().beginTx()) {
+            node1 = getDatabase().createNode();
             node1.setProperty("name", "MB");
             node1.addLabel(DynamicLabel.label("Person"));
-            node2 = database.createNode();
+            node2 = getDatabase().createNode();
             node2.addLabel(DynamicLabel.label("Company"));
             node1.createRelationshipTo(node2, DynamicRelationshipType.withName("WORKS_AT"));
 
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node2.setProperty("name", "GraphAware");
             node2.setProperty("location", "London");
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node1.setProperty("name", "Michal");
             node2.removeProperty("location");
             node2.removeLabel(DynamicLabel.label("Company"));
@@ -70,29 +73,29 @@ public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest {
         }
 
         List<ChangeSet> changes = changeFeed.getAllChanges();
-        Assert.assertTrue(changes.size() == 3);
+        assertEquals(3, changes.size());
 
         ChangeSet set1 = changes.get(0);
-        Date set1Date = set1.getChangeDate();
-        Assert.assertEquals(2, set1.getChanges().size());
-        Assert.assertTrue(set1.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
-        Assert.assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
+        long set1Date = set1.getTimestamp();
+        assertEquals(2, set1.getChanges().size());
+        assertTrue(set1.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
+        assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
 
 
         ChangeSet set2 = changes.get(1);
-        Date set2Date = set2.getChangeDate();
-        Assert.assertEquals(1, set2.getChanges().size());
-        Assert.assertTrue(set2.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
+        long set2Date = set2.getTimestamp();
+        assertEquals(1, set2.getChanges().size());
+        assertTrue(set2.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
 
         ChangeSet set3 = changes.get(2);
-        Date set3Date = set3.getChangeDate();
-        Assert.assertEquals(3, set3.getChanges().size());
-        Assert.assertTrue(set3.getChanges().contains("Created node (:Company)"));
-        Assert.assertTrue(set3.getChanges().contains("Created node (:Person {name: MB})"));
-        Assert.assertTrue(set3.getChanges().contains("Created relationship (:Person {name: MB})-[:WORKS_AT]->(:Company)"));
+        long set3Date = set3.getTimestamp();
+        assertEquals(3, set3.getChanges().size());
+        assertTrue(set3.getChanges().contains("Created node (:Company)"));
+        assertTrue(set3.getChanges().contains("Created node (:Person {name: MB})"));
+        assertTrue(set3.getChanges().contains("Created relationship (:Person {name: MB})-[:WORKS_AT]->(:Company)"));
 
-        Assert.assertTrue(set1Date.getTime() >= set2Date.getTime());
-        Assert.assertTrue(set2Date.getTime() >= set3Date.getTime());
+        assertTrue(set1Date >= set2Date);
+        assertTrue(set2Date >= set3Date);
 
     }
 
