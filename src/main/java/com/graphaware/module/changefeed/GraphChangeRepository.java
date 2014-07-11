@@ -41,7 +41,10 @@ public class GraphChangeRepository implements ChangeRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphChangeRepository.class);
 
-    private static final String CHANGES_SINCE_QUERY = "match (startChange:_GA_ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:_GA_CHANGEFEED_NEXT_CHANGE*..]-(change:_GA_ChangeSet) return change order by change.sequence desc";
+    //todo index on sequence
+    //todo rewrite in Java?
+    private static final String CHANGES_SINCE_QUERY = "MATCH (startChange:_GA_ChangeSet {sequence: {sequence}}) WITH startChange MATCH (startChange)<-[:_GA_CHANGEFEED_NEXT_CHANGE*..]-(change:_GA_ChangeSet) RETURN change ORDER BY change.sequence desc";
+    private static final int PRUNE_WHEN_MAX_EXCEEDED_BY = 10;
 
     private final GraphDatabaseService database;
     private final ExecutionEngine executionEngine;
@@ -73,7 +76,7 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public List<ChangeSet> getAllChanges() {
-        return getChanges("match (root:_GA_ChangeFeed)-[:_GA_CHANGEFEED_NEXT_CHANGE*.." + Integer.MAX_VALUE + "]->(change) return change", Collections.<String, Object>emptyMap());
+        return getNumberOfChanges(Integer.MAX_VALUE);
     }
 
     /**
@@ -81,7 +84,7 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public List<ChangeSet> getNumberOfChanges(int limit) {
-        return getChanges("match (root:_GA_ChangeFeed)-[:_GA_CHANGEFEED_NEXT_CHANGE*.." + limit + "]->(change) return change", Collections.<String, Object>emptyMap());
+        return getChanges("MATCH (root:_GA_ChangeFeed)-[:_GA_CHANGEFEED_NEXT_CHANGE*.." + limit + "]->(change) RETURN change", Collections.<String, Object>emptyMap());
     }
 
     /**
@@ -89,9 +92,7 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public List<ChangeSet> getChangesSince(int since) {
-        Map<String, Object> params = new HashMap<>();
-        params.put(SEQUENCE, since);
-        return getChanges(CHANGES_SINCE_QUERY, params);
+        return getChanges(CHANGES_SINCE_QUERY, Collections.<String, Object>singletonMap(SEQUENCE, since));
     }
 
     /**
@@ -99,7 +100,7 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public List<ChangeSet> getNumberOfChangesSince(int since, int limit) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        return getChanges("MATCH (startChange:_GA_ChangeSet {sequence: {sequence}}) WITH startChange MATCH (startChange)<-[:_GA_CHANGEFEED_NEXT_CHANGE*.." + limit + "]-(change:_GA_ChangeSet) RETURN change ORDER BY change.sequence desc", Collections.<String, Object>singletonMap(SEQUENCE, since));
     }
 
     private List<ChangeSet> getChanges(String query, Map<String, Object> params) {
@@ -107,14 +108,14 @@ public class GraphChangeRepository implements ChangeRepository {
             return doGetChanges(query, params);
         } catch (Exception e) {
             LOG.error("Could not fetch changeFeed on first attempt", e);
-            try {
-                return doGetChanges(query, params);
-            } catch (Exception e2) {     //We hope not to reach here
-                LOG.error("Could not fetch changeFeed on second attempt", e2);
-                throw e2;
-            }
         }
 
+        try {
+            return doGetChanges(query, params);
+        } catch (Exception e) {     //We hope not to reach here
+            LOG.error("Could not fetch changeFeed on second attempt", e);
+            throw e;
+        }
     }
 
     /**
@@ -125,7 +126,7 @@ public class GraphChangeRepository implements ChangeRepository {
      * @return List of {@link ChangeSet}, latest change first.
      */
     private List<ChangeSet> doGetChanges(String query, Map<String, Object> params) {
-        List<ChangeSet> changefeed = new ArrayList<>();
+        List<ChangeSet> changeFeed = new LinkedList<>();
 
         ExecutionResult result;
         try (Transaction tx = database.beginTx()) {
@@ -135,12 +136,12 @@ public class GraphChangeRepository implements ChangeRepository {
                 Node changeNode = changeNodes.next();
                 ChangeSet changeSet = new ChangeSet((long) changeNode.getProperty(SEQUENCE), (long) changeNode.getProperty(TIMESTAMP));
                 changeSet.addChanges((String[]) changeNode.getProperty(CHANGES));
-                changefeed.add(changeSet);
+                changeFeed.add(changeSet);
             }
             tx.success();
         }
 
-        return changefeed;
+        return changeFeed;
     }
 
     /**
@@ -184,8 +185,6 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public void pruneChanges(int keep) {
-        final int MAX_FEED_LENGTH_EXCEEDED = 3;
-
         Relationship oldestChangeRel = getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING);
         if (oldestChangeRel != null) {
             Node oldestNode = oldestChangeRel.getEndNode();
@@ -195,7 +194,7 @@ public class GraphChangeRepository implements ChangeRepository {
                 long lowSequence = (long) oldestNode.getProperty(SEQUENCE);
                 long nodesToDelete = ((highSequence - lowSequence) + 1) - keep;
                 Node newOldestNode = null;
-                if (nodesToDelete > MAX_FEED_LENGTH_EXCEEDED) {
+                if (nodesToDelete >= PRUNE_WHEN_MAX_EXCEEDED_BY) {
                     LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
                     getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING).delete();
                     while (nodesToDelete > 0) {
@@ -207,7 +206,7 @@ public class GraphChangeRepository implements ChangeRepository {
                         nodesToDelete--;
                     }
                     getRoot().createRelationshipTo(newOldestNode, _GA_CHANGEFEED_OLDEST_CHANGE);
-                    LOG.info("_GA_ChangeFeed pruning complete");
+                    LOG.info("ChangeFeed pruning complete");
                 }
             }
         }
