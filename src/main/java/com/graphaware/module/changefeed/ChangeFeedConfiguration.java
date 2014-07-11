@@ -9,7 +9,7 @@ import com.graphaware.runtime.strategy.InclusionStrategiesFactory;
  */
 public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<ChangeFeedConfiguration> {
 
-    private static final int MAX_CHANGES_DEFAULT = 50;
+    private static final int MAX_CHANGES_DEFAULT = 100;
 
     private final int maxChanges;
 
