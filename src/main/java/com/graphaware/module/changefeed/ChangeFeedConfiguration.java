@@ -2,11 +2,10 @@ package com.graphaware.module.changefeed;
 
 import com.graphaware.common.strategy.InclusionStrategies;
 import com.graphaware.runtime.config.BaseTxDrivenModuleConfiguration;
-import com.graphaware.runtime.config.TxDrivenModuleConfiguration;
 import com.graphaware.runtime.strategy.InclusionStrategiesFactory;
 
 /**
- *  {@link TxDrivenModuleConfiguration} for {@link ChangeFeedModule}.
+ *  {@link BaseTxDrivenModuleConfiguration} for {@link ChangeFeedModule}.
  */
 public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<ChangeFeedConfiguration> {
 

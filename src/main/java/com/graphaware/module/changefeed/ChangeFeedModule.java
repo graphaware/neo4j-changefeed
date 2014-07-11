@@ -17,33 +17,43 @@
 package com.graphaware.module.changefeed;
 
 import com.graphaware.runtime.config.TxDrivenModuleConfiguration;
-import com.graphaware.runtime.metadata.NodeBasedContext;
+import com.graphaware.runtime.metadata.EmptyContext;
 import com.graphaware.runtime.module.BaseTxDrivenModule;
 import com.graphaware.runtime.module.TimerDrivenModule;
 import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
-import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
+import static com.graphaware.module.changefeed.Relationships.GA_CHANGEFEED_NEXT_CHANGE;
+import static com.graphaware.module.changefeed.Relationships.GA_CHANGEFEED_OLDEST_CHANGE;
+import static org.neo4j.graphdb.Direction.INCOMING;
+import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
  * A GraphAware {@link com.graphaware.runtime.module.TxDrivenModule} that keeps track of changes in the graph.
  * Also implements {@link TimerDrivenModule} to perform pruning of old changes.
  */
-public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerDrivenModule<NodeBasedContext> {
+public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerDrivenModule<EmptyContext> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChangeFeedModule.class);
-    private static final Object mutex = new Object();
-    public static final int PRUNE_DELAY = 5000;
+
+    private static final int PRUNE_DELAY = 5000;
+    private static final String SEQUENCE_PROPERTY_KEY = "sequence";
+
     private final ChangeFeedConfiguration configuration;
 
     private final GraphChangeRepository changeFeed;
-    private AtomicInteger sequence = null;
+    private volatile AtomicInteger sequence = null;
     private GraphDatabaseService database;
+    private Node root;
 
     public ChangeFeedModule(String moduleId, ChangeFeedConfiguration configuration, GraphDatabaseService database) {
         super(moduleId);
@@ -52,20 +62,54 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         this.changeFeed = new GraphChangeRepository(database);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void initialize(GraphDatabaseService database) {
+    public void start(GraphDatabaseService database) {
+        root = getOrCreateRoot();
+        initializeSequence();
+    }
+
+    private Node getOrCreateRoot() {
+        Node root;
+
         try (Transaction tx = database.beginTx()) {
-            Node result = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
-            if (result == null) {
-                LOG.info("Creating the _GA_ChangeFeed root");
-                database.createNode(Labels._GA_ChangeFeed);
+            root = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
+            if (root == null) {
+                LOG.info("Creating the ChangeFeed Root");
+                root = database.createNode(Labels._GA_ChangeFeed);
             }
             tx.success();
         }
-        LOG.info("Initialized ChangeFeedModule");
-        super.initialize(database);
+
+        return root;
     }
 
+    /**
+     * Initialize the sequence to the last used number. No need to synchronize, called from constructor, thus in a single
+     * thread.
+     */
+    private void initializeSequence() {
+        int startSequence = 0;
+
+        try (Transaction tx = database.beginTx()) {
+            Relationship nextRel = getRoot().getSingleRelationship(GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
+            if (nextRel != null) {
+                startSequence = (Integer) nextRel.getEndNode().getProperty(SEQUENCE_PROPERTY_KEY);
+            }
+            tx.success();
+        }
+
+        sequence = new AtomicInteger(startSequence);
+    }
+
+    private Node getRoot() {
+        if (root == null) {
+            throw new IllegalStateException("There is not ChangeFeed Root! This is a bug. It looks like the start() method hasn't been called.");
+        }
+        return root;
+    }
 
     /**
      * {@inheritDoc}
@@ -80,78 +124,60 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
      */
     @Override
     public Void beforeCommit(ImprovedTransactionData transactionData) {
-        if (sequence == null) { //Initialize the sequence if not already done.
-            synchronized (this) {
-                if (sequence == null) {
-                    int startSequence = 0;
-                    Node result = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
-                    if (result != null) {
-                        Relationship nextRel = result.getSingleRelationship(Relationships.GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
-                        if (nextRel != null) {
-                            startSequence = (Integer) nextRel.getEndNode().getProperty("sequence");
-                        }
-                    }
-                    sequence = new AtomicInteger(startSequence);
-                }
-            }
-        }
-
-
         if (transactionData.mutationsOccurred()) {
             ChangeSet changeSet = new ChangeSet();
             changeSet.getChanges().addAll(transactionData.mutationsToStrings());
             changeSet.setSequence(sequence.incrementAndGet()); //TODO might this result in holes if a runtime exception is thrown at the end of this module or any other
             changeFeed.recordChange(changeSet);
+        } else {
+            //todo remove this
+            throw new IllegalStateException("This should never happen, the framework should take care of this");
         }
 
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public NodeBasedContext createInitialContext(GraphDatabaseService database) {
-        Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
-        LOG.info("Pruning Initial context created");
-        return new NodeBasedContext(changeRoot);
+    public EmptyContext createInitialContext(GraphDatabaseService database) {
+        return new EmptyContext(System.currentTimeMillis() + PRUNE_DELAY);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public NodeBasedContext doSomeWork(NodeBasedContext lastContext, GraphDatabaseService database) {
-        Node changeRoot;
-        try {
-            changeRoot = lastContext.find(database);
-        } catch (NotFoundException e) {
-            changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
-        }
-
-        pruneChangeFeed(changeRoot);
-
-        return new NodeBasedContext(changeRoot, System.currentTimeMillis() + PRUNE_DELAY);
+    public EmptyContext doSomeWork(EmptyContext lastContext, GraphDatabaseService database) {
+        pruneChangeFeed(getRoot());
+        return new EmptyContext(System.currentTimeMillis() + PRUNE_DELAY);
     }
 
     private void pruneChangeFeed(Node changeRoot) {
         final int MAX_FEED_LENGTH_EXCEEDED = 3;
 
-        Relationship oldestChangeRel = changeRoot.getSingleRelationship(Relationships.GA_CHANGEFEED_OLDEST_CHANGE, Direction.OUTGOING);
+        Relationship oldestChangeRel = changeRoot.getSingleRelationship(GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING);
         if (oldestChangeRel != null) {
             Node oldestNode = oldestChangeRel.getEndNode();
-            Node newestNode = changeRoot.getSingleRelationship(Relationships.GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING).getEndNode();
+            Node newestNode = changeRoot.getSingleRelationship(GA_CHANGEFEED_NEXT_CHANGE, OUTGOING).getEndNode();
             if (newestNode != null) {
-                int highSequence = (int) newestNode.getProperty("sequence");
-                int lowSequence = (int) oldestNode.getProperty("sequence");
+                int highSequence = (int) newestNode.getProperty(SEQUENCE_PROPERTY_KEY);
+                int lowSequence = (int) oldestNode.getProperty(SEQUENCE_PROPERTY_KEY);
                 int nodesToDelete = ((highSequence - lowSequence) + 1) - configuration.getMaxChanges();
                 Node newOldestNode = null;
                 if (nodesToDelete > MAX_FEED_LENGTH_EXCEEDED) {
                     LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
-                    changeRoot.getSingleRelationship(Relationships.GA_CHANGEFEED_OLDEST_CHANGE, Direction.OUTGOING).delete();
+                    changeRoot.getSingleRelationship(GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING).delete();
                     while (nodesToDelete > 0) {
-                        Relationship rel = oldestNode.getSingleRelationship(Relationships.GA_CHANGEFEED_NEXT_CHANGE, Direction.INCOMING);
+                        Relationship rel = oldestNode.getSingleRelationship(GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
                         newOldestNode = rel.getStartNode();
                         rel.delete();
                         oldestNode.delete();
                         oldestNode = newOldestNode;
                         nodesToDelete--;
                     }
-                    changeRoot.createRelationshipTo(newOldestNode, Relationships.GA_CHANGEFEED_OLDEST_CHANGE);
+                    changeRoot.createRelationshipTo(newOldestNode, GA_CHANGEFEED_OLDEST_CHANGE);
                     LOG.info("_GA_ChangeFeed pruning complete");
                 }
             }
