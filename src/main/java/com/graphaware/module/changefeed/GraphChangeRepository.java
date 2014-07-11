@@ -43,6 +43,7 @@ public class GraphChangeRepository implements ChangeRepository {
 
     //todo index on sequence
     //todo rewrite in Java?
+    //todo if sequence number does not exist any more (was pruned), nothing is returned
     private static final String CHANGES_SINCE_QUERY = "MATCH (startChange:_GA_ChangeSet {sequence: {sequence}}) WITH startChange MATCH (startChange)<-[:_GA_CHANGEFEED_NEXT_CHANGE*..]-(change:_GA_ChangeSet) RETURN change ORDER BY change.sequence desc";
     private static final int PRUNE_WHEN_MAX_EXCEEDED_BY = 10;
 

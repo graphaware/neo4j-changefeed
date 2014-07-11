@@ -16,6 +16,8 @@
 
 package com.graphaware.module.changefeed;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.*;
 
 /**
@@ -109,6 +111,7 @@ public class ChangeSet {
      *
      * @return all changes in an array.
      */
+    @JsonIgnore
     public String[] getChangesAsArray() {
         return changes.toArray(new String[changes.size()]);
     }
