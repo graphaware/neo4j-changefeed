@@ -16,8 +16,14 @@
 
 package com.graphaware.module.changefeed;
 
+import com.graphaware.common.strategy.NodeInclusionStrategy;
+import com.graphaware.common.strategy.RelationshipInclusionStrategy;
+import com.graphaware.common.util.IterableUtils;
+import com.graphaware.runtime.config.MinimalTxDrivenModuleConfiguration;
+import com.graphaware.runtime.config.TxDrivenModuleConfiguration;
 import com.graphaware.runtime.module.BaseTxDrivenModule;
 import com.graphaware.runtime.module.TimerDrivenModule;
+import com.graphaware.runtime.strategy.InclusionStrategiesFactory;
 import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
 import org.neo4j.graphdb.*;
 import org.slf4j.Logger;
@@ -38,6 +44,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     private static int maxChanges = MAX_CHANGES_DEFAULT;
     private static final Logger LOG = LoggerFactory.getLogger(ChangeFeedModule.class);
     private static final Object mutex = new Object();
+    private final TxDrivenModuleConfiguration configuration;
 
     private final ChangeFeed changeFeed;
     private AtomicInteger sequence = null;
@@ -51,6 +58,25 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         }
         this.database = database;
         this.changeFeed = new ChangeFeed(database);
+        //only take into account relationships with FRIEND_OF type:
+        configuration = new MinimalTxDrivenModuleConfiguration(
+                InclusionStrategiesFactory.allBusiness()
+                        .with(
+                                new RelationshipInclusionStrategy() {
+                                    @Override
+                                    public boolean include(Relationship rel) {
+                                        return !(rel.isType(Relationships.NEXT) || rel.isType(Relationships.OLDEST_CHANGE));
+                                    }
+                                }
+                        )
+                        .with(
+                                new NodeInclusionStrategy() {
+                                    @Override
+                                    public boolean include(Node node) {
+                                        return !(IterableUtils.contains(node.getLabels(), Labels.ChangeSet) || IterableUtils.contains(node.getLabels(), Labels.ChangeFeed));
+                                    }
+                                }
+                        ));
     }
 
     public static int getMaxChanges() {
@@ -79,6 +105,14 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public TxDrivenModuleConfiguration getConfiguration() {
+        return configuration;
+    }
+
     @Override
     public Void beforeCommit(ImprovedTransactionData transactionData) {
         if (sequence == null) {
@@ -99,6 +133,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
 
 
         if (transactionData.mutationsOccurred()) {
+            LOG.info("****** {}", transactionData.mutationsToStrings());
             ChangeSet changeSet = new ChangeSet();
             changeSet.getChanges().addAll(transactionData.mutationsToStrings());
             changeSet.setSequence(sequence.incrementAndGet()); //TODO might this result in holes if a transaction fails to commit?
@@ -121,7 +156,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
 
     @Override
     public PruningNodeContext doSomeWork(PruningNodeContext lastContext, GraphDatabaseService database) {
-        final int MAX_FEED_LENGTH_EXCEEDED=3;
+        final int MAX_FEED_LENGTH_EXCEEDED = 3;
 
         Node changeRoot = lastContext.find(database);
         synchronized (mutex) {
@@ -135,27 +170,29 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
                     lastContext.setState(PruningNodeContext.State.RUNNING);
             }
         }
-
-        Node oldestNode = changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE, Direction.OUTGOING).getEndNode();
-        Node newestNode = changeRoot.getSingleRelationship(Relationships.NEXT, Direction.OUTGOING).getEndNode();
-        if (newestNode != null) {
-            int highSequence = (int) newestNode.getProperty("sequence");
-            int lowSequence = (int) oldestNode.getProperty("sequence");
-            int nodesToDelete = ((highSequence - lowSequence) + 1) - maxChanges;
-            Node newOldestNode = null;
-            if (nodesToDelete > MAX_FEED_LENGTH_EXCEEDED) {
-                LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
-                changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE, Direction.OUTGOING).delete();
-                while (nodesToDelete > 0) {
-                    Relationship rel = oldestNode.getSingleRelationship(Relationships.NEXT, Direction.INCOMING);
-                    newOldestNode = rel.getStartNode();
-                    rel.delete();
-                    oldestNode.delete();
-                    oldestNode = newOldestNode;
-                    nodesToDelete--;
+        Relationship oldestChangeRel = changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE, Direction.OUTGOING);
+        if (oldestChangeRel != null) {
+            Node oldestNode = oldestChangeRel.getEndNode();
+            Node newestNode = changeRoot.getSingleRelationship(Relationships.NEXT, Direction.OUTGOING).getEndNode();
+            if (newestNode != null) {
+                int highSequence = (int) newestNode.getProperty("sequence");
+                int lowSequence = (int) oldestNode.getProperty("sequence");
+                int nodesToDelete = ((highSequence - lowSequence) + 1) - maxChanges;
+                Node newOldestNode = null;
+                if (nodesToDelete > MAX_FEED_LENGTH_EXCEEDED) {
+                    LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
+                    changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE, Direction.OUTGOING).delete();
+                    while (nodesToDelete > 0) {
+                        Relationship rel = oldestNode.getSingleRelationship(Relationships.NEXT, Direction.INCOMING);
+                        newOldestNode = rel.getStartNode();
+                        rel.delete();
+                        oldestNode.delete();
+                        oldestNode = newOldestNode;
+                        nodesToDelete--;
+                    }
+                    changeRoot.createRelationshipTo(newOldestNode, Relationships.OLDEST_CHANGE);
+                    LOG.info("ChangeFeed pruning complete");
                 }
-                changeRoot.createRelationshipTo(newOldestNode, Relationships.OLDEST_CHANGE);
-                LOG.info("ChangeFeed pruning complete");
             }
         }
         lastContext.setState(PruningNodeContext.State.NOT_RUNNING);
