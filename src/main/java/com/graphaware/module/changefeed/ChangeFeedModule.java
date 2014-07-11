@@ -38,7 +38,7 @@ import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
- * A GraphAware {@link com.graphaware.runtime.module.TxDrivenModule} that keeps track of changes in the graph.
+ * A {@link com.graphaware.runtime.module.TxDrivenModule} that keeps track of changes in the graph.
  * Also implements {@link TimerDrivenModule} to perform pruning of old changes.
  */
 public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerDrivenModule<EmptyContext> {
@@ -49,9 +49,9 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     private static final String SEQUENCE_PROPERTY_KEY = "sequence";
 
     private final ChangeFeedConfiguration configuration;
+    private final GraphChangeRepository repository;
 
-    private final GraphChangeRepository changeFeed;
-    private volatile AtomicInteger sequence = null;
+    private AtomicInteger sequence = null;
     private GraphDatabaseService database;
     private Node root;
 
@@ -59,7 +59,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         super(moduleId);
         this.configuration = configuration;
         this.database = database;
-        this.changeFeed = new GraphChangeRepository(database);
+        this.repository = new GraphChangeRepository(database);
     }
 
     /**
@@ -71,6 +71,11 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         initializeSequence();
     }
 
+    /**
+     * Get or create the root of the change feed.
+     *
+     * @return root.
+     */
     private Node getOrCreateRoot() {
         Node root;
 
@@ -104,6 +109,11 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         sequence = new AtomicInteger(startSequence);
     }
 
+    /**
+     * Get the root.
+     *
+     * @return root, will never be null.
+     */
     private Node getRoot() {
         if (root == null) {
             throw new IllegalStateException("There is not ChangeFeed Root! This is a bug. It looks like the start() method hasn't been called.");
@@ -124,15 +134,10 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
      */
     @Override
     public Void beforeCommit(ImprovedTransactionData transactionData) {
-        if (transactionData.mutationsOccurred()) {
-            ChangeSet changeSet = new ChangeSet();
-            changeSet.getChanges().addAll(transactionData.mutationsToStrings());
-            changeSet.setSequence(sequence.incrementAndGet()); //TODO might this result in holes if a runtime exception is thrown at the end of this module or any other
-            changeFeed.recordChange(changeSet);
-        } else {
-            //todo remove this
-            throw new IllegalStateException("This should never happen, the framework should take care of this");
-        }
+        ChangeSet changeSet = new ChangeSet();
+        changeSet.getChanges().addAll(transactionData.mutationsToStrings());
+        changeSet.setSequence(sequence.incrementAndGet()); //TODO might this result in holes if a runtime exception is thrown at the end of this module or any other
+        repository.recordChange(changeSet);
 
         return null;
     }

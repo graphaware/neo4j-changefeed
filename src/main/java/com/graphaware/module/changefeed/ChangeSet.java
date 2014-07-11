@@ -23,7 +23,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * A set of changes applied on the graph in a single transaction
+ * A set of changes applied on the graph in a single transaction.
  */
 public class ChangeSet {
 
