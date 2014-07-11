@@ -19,9 +19,10 @@ package com.graphaware.module.changefeed;
 import org.neo4j.graphdb.RelationshipType;
 
 /**
- * Relationships used by the _GA_ChangeFeed module
+ * Relationships used by the {@link ChangeFeedModule}.
  */
 public enum Relationships implements RelationshipType {
-    GA_CHANGEFEED_NEXT_CHANGE,
-    GA_CHANGEFEED_OLDEST_CHANGE
+
+    _GA_CHANGEFEED_NEXT_CHANGE,
+    _GA_CHANGEFEED_OLDEST_CHANGE,
 }

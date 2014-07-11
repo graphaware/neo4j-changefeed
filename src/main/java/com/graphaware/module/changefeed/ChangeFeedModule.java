@@ -22,19 +22,6 @@ import com.graphaware.runtime.module.BaseTxDrivenModule;
 import com.graphaware.runtime.module.TimerDrivenModule;
 import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.Transaction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.graphaware.module.changefeed.Properties.SEQUENCE;
-import static com.graphaware.module.changefeed.Relationships.GA_CHANGEFEED_NEXT_CHANGE;
-import static com.graphaware.module.changefeed.Relationships.GA_CHANGEFEED_OLDEST_CHANGE;
-import static org.neo4j.graphdb.Direction.INCOMING;
-import static org.neo4j.graphdb.Direction.OUTGOING;
 
 /**
  * A {@link com.graphaware.runtime.module.TxDrivenModule} that keeps track of changes in the graph.

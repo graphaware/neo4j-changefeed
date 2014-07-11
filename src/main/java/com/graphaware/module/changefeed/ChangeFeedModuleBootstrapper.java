@@ -41,7 +41,7 @@ public class ChangeFeedModuleBootstrapper implements RuntimeModuleBootstrapper {
         ChangeFeedConfiguration configuration = new ChangeFeedConfiguration();
 
         if (config.get(MAX_CHANGES) != null) {
-            int maxChanges = Integer.parseInt(config.get("maxChanges"));
+            int maxChanges = Integer.parseInt(config.get(MAX_CHANGES));
             LOG.info("MaxChanges set to {}", maxChanges);
             configuration = new ChangeFeedConfiguration(maxChanges);
         }

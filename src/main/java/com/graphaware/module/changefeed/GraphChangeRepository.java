@@ -26,10 +26,10 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
-import static com.graphaware.module.changefeed.Labels.*;
+import static com.graphaware.module.changefeed.Labels._GA_ChangeSet;
 import static com.graphaware.module.changefeed.Properties.*;
-import static com.graphaware.module.changefeed.Relationships.GA_CHANGEFEED_NEXT_CHANGE;
-import static com.graphaware.module.changefeed.Relationships.GA_CHANGEFEED_OLDEST_CHANGE;
+import static com.graphaware.module.changefeed.Relationships._GA_CHANGEFEED_NEXT_CHANGE;
+import static com.graphaware.module.changefeed.Relationships._GA_CHANGEFEED_OLDEST_CHANGE;
 import static org.neo4j.graphdb.Direction.INCOMING;
 import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
@@ -41,7 +41,7 @@ public class GraphChangeRepository implements ChangeRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphChangeRepository.class);
 
-    private static final String CHANGES_SINCE_QUERY = "match (startChange:_GA_ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:GA_CHANGEFEED_NEXT_CHANGE*..]-(change:_GA_ChangeSet) return change order by change.sequence desc";
+    private static final String CHANGES_SINCE_QUERY = "match (startChange:_GA_ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:_GA_CHANGEFEED_NEXT_CHANGE*..]-(change:_GA_ChangeSet) return change order by change.sequence desc";
 
     private final GraphDatabaseService database;
     private final ExecutionEngine executionEngine;
@@ -73,7 +73,7 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public List<ChangeSet> getAllChanges() {
-        return getChanges("match (root:_GA_ChangeFeed)-[:GA_CHANGEFEED_NEXT_CHANGE*.." + Integer.MAX_VALUE + "]->(change) return change", Collections.<String, Object>emptyMap());
+        return getChanges("match (root:_GA_ChangeFeed)-[:_GA_CHANGEFEED_NEXT_CHANGE*.." + Integer.MAX_VALUE + "]->(change) return change", Collections.<String, Object>emptyMap());
     }
 
     /**
@@ -81,7 +81,7 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public List<ChangeSet> getNumberOfChanges(int limit) {
-        return getChanges("match (root:_GA_ChangeFeed)-[:GA_CHANGEFEED_NEXT_CHANGE*.." + limit + "]->(change) return change", Collections.<String, Object>emptyMap());
+        return getChanges("match (root:_GA_ChangeFeed)-[:_GA_CHANGEFEED_NEXT_CHANGE*.." + limit + "]->(change) return change", Collections.<String, Object>emptyMap());
     }
 
     /**
@@ -163,17 +163,17 @@ public class GraphChangeRepository implements ChangeRepository {
 
             tx.acquireWriteLock(getRoot());
 
-            Relationship firstChangeRel = getRoot().getSingleRelationship(Relationships.GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
-            if (firstChangeRel == null) { //First changeSet recorded, create an GA_CHANGEFEED_OLDEST_CHANGE relation from the root to it
-                getRoot().createRelationshipTo(changeNode, Relationships.GA_CHANGEFEED_OLDEST_CHANGE);
+            Relationship firstChangeRel = getRoot().getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
+            if (firstChangeRel == null) { //First changeSet recorded, create an _GA_CHANGEFEED_OLDEST_CHANGE relation from the root to it
+                getRoot().createRelationshipTo(changeNode, Relationships._GA_CHANGEFEED_OLDEST_CHANGE);
             } else {
                 Node firstChange = firstChangeRel.getEndNode();
                 tx.acquireWriteLock(firstChange);
-                changeNode.createRelationshipTo(firstChange, Relationships.GA_CHANGEFEED_NEXT_CHANGE);
+                changeNode.createRelationshipTo(firstChange, Relationships._GA_CHANGEFEED_NEXT_CHANGE);
                 firstChangeRel.delete();
             }
 
-            getRoot().createRelationshipTo(changeNode, Relationships.GA_CHANGEFEED_NEXT_CHANGE);
+            getRoot().createRelationshipTo(changeNode, Relationships._GA_CHANGEFEED_NEXT_CHANGE);
 
             tx.success();
         }
@@ -186,10 +186,10 @@ public class GraphChangeRepository implements ChangeRepository {
     public void pruneChanges(int keep) {
         final int MAX_FEED_LENGTH_EXCEEDED = 3;
 
-        Relationship oldestChangeRel = getRoot().getSingleRelationship(GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING);
+        Relationship oldestChangeRel = getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING);
         if (oldestChangeRel != null) {
             Node oldestNode = oldestChangeRel.getEndNode();
-            Node newestNode = getRoot().getSingleRelationship(GA_CHANGEFEED_NEXT_CHANGE, OUTGOING).getEndNode();
+            Node newestNode = getRoot().getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING).getEndNode();
             if (newestNode != null) {
                 long highSequence = (long) newestNode.getProperty(SEQUENCE);
                 long lowSequence = (long) oldestNode.getProperty(SEQUENCE);
@@ -197,16 +197,16 @@ public class GraphChangeRepository implements ChangeRepository {
                 Node newOldestNode = null;
                 if (nodesToDelete > MAX_FEED_LENGTH_EXCEEDED) {
                     LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
-                    getRoot().getSingleRelationship(GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING).delete();
+                    getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING).delete();
                     while (nodesToDelete > 0) {
-                        Relationship rel = oldestNode.getSingleRelationship(GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
+                        Relationship rel = oldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
                         newOldestNode = rel.getStartNode();
                         rel.delete();
                         oldestNode.delete();
                         oldestNode = newOldestNode;
                         nodesToDelete--;
                     }
-                    getRoot().createRelationshipTo(newOldestNode, GA_CHANGEFEED_OLDEST_CHANGE);
+                    getRoot().createRelationshipTo(newOldestNode, _GA_CHANGEFEED_OLDEST_CHANGE);
                     LOG.info("_GA_ChangeFeed pruning complete");
                 }
             }
@@ -253,7 +253,7 @@ public class GraphChangeRepository implements ChangeRepository {
         int startSequence = 0;
 
         try (Transaction tx = database.beginTx()) {
-            Relationship nextRel = getRoot().getSingleRelationship(GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
+            Relationship nextRel = getRoot().getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
             if (nextRel != null) {
                 startSequence = (Integer) nextRel.getEndNode().getProperty(SEQUENCE);
             }

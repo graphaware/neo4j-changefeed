@@ -19,7 +19,6 @@ package com.graphaware.module.changefeed;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
@@ -79,7 +78,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         try (Transaction tx = database.beginTx()) {
             Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
             assertNotNull(changeRoot);
-            Relationship rel = changeRoot.getSingleRelationship(Relationships.GA_CHANGEFEED_OLDEST_CHANGE, Direction.OUTGOING);
+            Relationship rel = changeRoot.getSingleRelationship(Relationships._GA_CHANGEFEED_OLDEST_CHANGE, Direction.OUTGOING);
             assertNotNull(rel);
             assertEquals(1L, rel.getEndNode().getProperty(SEQUENCE));
             tx.success();

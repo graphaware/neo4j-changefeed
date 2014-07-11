@@ -1,7 +1,7 @@
 package com.graphaware.module.changefeed;
 
 /**
- * Properties of nodes and relationships written by this module.
+ * Properties of nodes and relationships written by the {@link ChangeFeedModule}.
  */
 public final class Properties {
 
