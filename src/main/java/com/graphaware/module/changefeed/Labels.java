@@ -19,9 +19,9 @@ package com.graphaware.module.changefeed;
 import org.neo4j.graphdb.Label;
 
 /**
- * Labels used by the ChangeFeed module
+ * Labels used by the _GA_ChangeFeed module
  */
 public enum Labels implements Label {
-    ChangeFeed,
-    ChangeSet
+    _GA_ChangeFeed,
+    _GA_ChangeSet
 }

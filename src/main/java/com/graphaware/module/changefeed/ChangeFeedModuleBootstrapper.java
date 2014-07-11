@@ -19,16 +19,33 @@ package com.graphaware.module.changefeed;
 import com.graphaware.runtime.module.RuntimeModule;
 import com.graphaware.runtime.module.RuntimeModuleBootstrapper;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
 /**
- * Bootstraps the {@link ChangeFeedModule}
+ * Bootstraps the {@link ChangeFeedModule} in server mode.
  */
 public class ChangeFeedModuleBootstrapper implements RuntimeModuleBootstrapper {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ChangeFeedModuleBootstrapper.class);
+
+    private static final String MAX_CHANGES = "maxChanges"; //key to use when configuring using neo4j.properties
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public RuntimeModule bootstrapModule(String moduleId, Map<String, String> config, GraphDatabaseService database) {
-        return new ChangeFeedModule(moduleId, database, config);
+        ChangeFeedConfiguration configuration = new ChangeFeedConfiguration();
+
+        if (config.get(MAX_CHANGES) != null) {
+            int maxChanges = Integer.parseInt(config.get("maxChanges"));
+            LOG.info("MaxChanges set to {}", maxChanges);
+            configuration = new ChangeFeedConfiguration(maxChanges);
+        }
+
+        return new ChangeFeedModule(moduleId, configuration, database);
     }
 }

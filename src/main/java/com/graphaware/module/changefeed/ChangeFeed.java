@@ -32,13 +32,11 @@ import static org.neo4j.tooling.GlobalGraphOperations.at;
  */
 public class ChangeFeed {
 
-    private final int maxChanges;
     private final GraphDatabaseService database;
     private final ExecutionEngine executionEngine;
     private static final Logger LOG = LoggerFactory.getLogger(ChangeFeed.class);
 
     public ChangeFeed(GraphDatabaseService database) {
-        this.maxChanges = ChangeFeedModule.getMaxChanges();
         this.database = database;
         executionEngine = new ExecutionEngine(database);
     }
@@ -61,8 +59,9 @@ public class ChangeFeed {
     public List<ChangeSet> getChanges(Integer since) {
         List<ChangeSet> changefeed = new ArrayList<>();
         ExecutionResult result;
-        String getChangesQuery = "match (root:ChangeFeed)-[:NEXT_CHANGE*.." + maxChanges + "]->(change) return change";
-        String getChangesSinceQuery = "match (startChange:ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:NEXT_CHANGE*..]-(change:ChangeSet) return change order by change.sequence desc";
+//        String getChangesQuery = "match (root:_GA_ChangeFeed)-[:GA_CHANGEFEED_NEXT_CHANGE*.." + maxChanges + "]->(change) return change";
+        String getChangesQuery = "match (root:_GA_ChangeFeed)-[:GA_CHANGEFEED_NEXT_CHANGE*..1000]->(change) return change"; //todo how to set max?
+        String getChangesSinceQuery = "match (startChange:_GA_ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:GA_CHANGEFEED_NEXT_CHANGE*..]-(change:_GA_ChangeSet) return change order by change.sequence desc";
         try (Transaction tx = database.beginTx()) {
             if (since == null) {
                 result = executionEngine.execute(getChangesQuery);
@@ -93,13 +92,13 @@ public class ChangeFeed {
     }
 
     /**
-     * Persist the ChangeSet in the graph
+     * Persist the _GA_ChangeSet in the graph
      *
-     * @param changeSet the ChangeSet to be persisted
+     * @param changeSet the _GA_ChangeSet to be persisted
      */
     public void recordChange(ChangeSet changeSet) {
         try (Transaction tx = database.beginTx()) {
-            Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
+            Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
             if (changeRoot == null) {
                 LOG.error("ChangeFeedModule not initialized!");
                 throw new IllegalStateException("Module not initialized");
@@ -110,19 +109,19 @@ public class ChangeFeed {
             changeNode.setProperty("changeDate", changeSet.getChangeDate().getTime());
             List<String> changeSetChanges = changeSet.getChanges();
             changeNode.setProperty("changes", changeSetChanges.toArray(new String[changeSetChanges.size()]));
-            changeNode.addLabel(Labels.ChangeSet);
+            changeNode.addLabel(Labels._GA_ChangeSet);
 
-            Relationship firstChangeRel = changeRoot.getSingleRelationship(Relationships.NEXT_CHANGE, Direction.OUTGOING);
-            if (firstChangeRel == null) { //First changeSet recorded, create an OLDEST_CHANGE relation from the root to it
-                changeRoot.createRelationshipTo(changeNode, Relationships.OLDEST_CHANGE);
+            Relationship firstChangeRel = changeRoot.getSingleRelationship(Relationships.GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
+            if (firstChangeRel == null) { //First changeSet recorded, create an GA_CHANGEFEED_OLDEST_CHANGE relation from the root to it
+                changeRoot.createRelationshipTo(changeNode, Relationships.GA_CHANGEFEED_OLDEST_CHANGE);
             } else {
                 Node firstChange = firstChangeRel.getEndNode();
                 tx.acquireWriteLock(firstChange);
-                changeNode.createRelationshipTo(firstChange, Relationships.NEXT_CHANGE);
+                changeNode.createRelationshipTo(firstChange, Relationships.GA_CHANGEFEED_NEXT_CHANGE);
                 firstChangeRel.delete();
             }
 
-            changeRoot.createRelationshipTo(changeNode, Relationships.NEXT_CHANGE);
+            changeRoot.createRelationshipTo(changeNode, Relationships.GA_CHANGEFEED_NEXT_CHANGE);
 
             tx.success();
         }

@@ -47,10 +47,8 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
     public void setUp() {
         database = new TestGraphDatabaseFactory().newImpermanentDatabase();
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database);
-        Map<String, String> config = new HashMap<>();
-        config.put("maxChanges", "3");
-
-        runtime.registerModule(new ChangeFeedModule("CFM", database, config));
+        ChangeFeedConfiguration config = new ChangeFeedConfiguration(3);
+        runtime.registerModule(new ChangeFeedModule("CFM", config, database));
         changeFeed = new ChangeFeed(database);
     }
 
@@ -81,9 +79,9 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         }
 
         try (Transaction tx = database.beginTx()) {
-            Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels.ChangeFeed));
+            Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
             Assert.assertNotNull(changeRoot);
-            Relationship rel = changeRoot.getSingleRelationship(Relationships.OLDEST_CHANGE, Direction.OUTGOING);
+            Relationship rel = changeRoot.getSingleRelationship(Relationships.GA_CHANGEFEED_OLDEST_CHANGE, Direction.OUTGOING);
             Assert.assertNotNull(rel);
             Assert.assertEquals(1, rel.getEndNode().getProperty("sequence"));
             tx.success();
