@@ -40,7 +40,7 @@ import static org.neo4j.tooling.GlobalGraphOperations.at;
  */
 public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerDrivenModule<PruningNodeContext> {
 
-    private static final int MAX_CHANGES_DEFAULT = 50;
+    private static final int MAX_CHANGES_DEFAULT = 100;
     private static int maxChanges = MAX_CHANGES_DEFAULT;
     private static final Logger LOG = LoggerFactory.getLogger(ChangeFeedModule.class);
     private static final Object mutex = new Object();
