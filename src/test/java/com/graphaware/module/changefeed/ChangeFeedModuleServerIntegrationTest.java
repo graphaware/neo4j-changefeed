@@ -14,7 +14,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-package com.graphaware.changefeed;
+package com.graphaware.module.changefeed;
 
 import com.graphaware.test.integration.NeoServerIntegrationTest;
 import junit.framework.Assert;

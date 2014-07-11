@@ -28,48 +28,89 @@ import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
- * Keeps track of changes made to the graph
+ * {@link ChangeRepository} that keeps the changes stored in the graph.
  */
-public class ChangeFeed {
+public class GraphChangeRepository implements ChangeRepository {
 
     private final GraphDatabaseService database;
     private final ExecutionEngine executionEngine;
-    private static final Logger LOG = LoggerFactory.getLogger(ChangeFeed.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GraphChangeRepository.class);
 
-    public ChangeFeed(GraphDatabaseService database) {
+    private static final String CHANGES_SINCE_QUERY = "match (startChange:_GA_ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:GA_CHANGEFEED_NEXT_CHANGE*..]-(change:_GA_ChangeSet) return change order by change.sequence desc";
+
+    /**
+     * Construct a new repository.
+     *
+     * @param database in which to store the changes.
+     */
+    public GraphChangeRepository(GraphDatabaseService database) {
         this.database = database;
         executionEngine = new ExecutionEngine(database);
     }
 
     /**
-     * Get a list of changes made to the graph, where each item represents all changes made within a transaction.
-     *
-     * @return List of {@link ChangeSet}, latest change first
+     * {@inheritDoc}
      */
-    public List<ChangeSet> getChanges() {
-        return getChanges(null);
+    @Override
+    public List<ChangeSet> getAllChanges() {
+        return getChanges("match (root:_GA_ChangeFeed)-[:GA_CHANGEFEED_NEXT_CHANGE*.." + Integer.MAX_VALUE + "]->(change) return change",  Collections.<String, Object>emptyMap());
     }
 
     /**
-     * Get a list of changes made to the graph since a known change
-     *
-     * @param since sequence number of a known change. All changes with sequence number greater than this parameter are returned.
-     * @return List of {@link ChangeSet}, latest change first
+     * {@inheritDoc}
      */
-    public List<ChangeSet> getChanges(Integer since) {
+    @Override
+    public List<ChangeSet> getNumberOfChanges(int limit) {
+        return getChanges("match (root:_GA_ChangeFeed)-[:GA_CHANGEFEED_NEXT_CHANGE*.." + limit + "]->(change) return change", Collections.<String, Object>emptyMap());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<ChangeSet> getChangesSince(int since) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("sequence", since);
+        return getChanges(CHANGES_SINCE_QUERY, params);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<ChangeSet> getNumberOfChangesSince(int since, int limit) {
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    private List<ChangeSet> getChanges(String query, Map<String, Object> params) {
+         try {
+             return doGetChanges(query, params);
+         }
+         catch (Exception e) {
+             LOG.error("Could not fetch changeFeed on first attempt", e);
+             try {
+                 return doGetChanges(query, params);
+             } catch (Exception e2) {     //We hope not to reach here
+                 LOG.error("Could not fetch changeFeed on second attempt", e2);
+                 throw e2;
+             }
+         }
+
+    }
+
+    /**
+     * Get a list of changes from the graph.
+     *
+     * @param query  to get changes.
+     * @param params for the query, may not be null (but can be empty).
+     * @return List of {@link ChangeSet}, latest change first.
+     */
+    private List<ChangeSet> doGetChanges(String query, Map<String, Object> params) {
         List<ChangeSet> changefeed = new ArrayList<>();
+
         ExecutionResult result;
-//        String getChangesQuery = "match (root:_GA_ChangeFeed)-[:GA_CHANGEFEED_NEXT_CHANGE*.." + maxChanges + "]->(change) return change";
-        String getChangesQuery = "match (root:_GA_ChangeFeed)-[:GA_CHANGEFEED_NEXT_CHANGE*..1000]->(change) return change"; //todo how to set max?
-        String getChangesSinceQuery = "match (startChange:_GA_ChangeSet {sequence: {sequence}}) with startChange match (startChange)<-[:GA_CHANGEFEED_NEXT_CHANGE*..]-(change:_GA_ChangeSet) return change order by change.sequence desc";
         try (Transaction tx = database.beginTx()) {
-            if (since == null) {
-                result = executionEngine.execute(getChangesQuery);
-            } else {
-                Map<String, Object> params = new HashMap<>();
-                params.put("sequence", since);
-                result = executionEngine.execute(getChangesSinceQuery, params);
-            }
+            result = executionEngine.execute(query, params);
             Iterator<Node> resultsIt = result.columnAs("change");
             while (resultsIt.hasNext()) {
                 Node changeNode = resultsIt.next();
@@ -80,22 +121,15 @@ public class ChangeFeed {
                 changefeed.add(changeSet);
             }
             tx.success();
-        } catch (Exception e) {
-            LOG.error("Could not fetch changeFeed on first attempt", e);
-            try {
-                changefeed = getChanges(since);
-            } catch (Exception e2) {     //We hope not to reach here
-                LOG.error("Could not fetch changeFeed on second attempt", e2);
-            }
         }
+
         return changefeed;
     }
 
     /**
-     * Persist the _GA_ChangeSet in the graph
-     *
-     * @param changeSet the _GA_ChangeSet to be persisted
+     * {@inheritDoc}
      */
+    @Override
     public void recordChange(ChangeSet changeSet) {
         try (Transaction tx = database.beginTx()) {
             Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));

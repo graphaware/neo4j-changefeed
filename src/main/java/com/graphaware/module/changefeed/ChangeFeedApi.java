@@ -27,30 +27,42 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import java.util.List;
 
 /**
- * REST API for {@link ChangeFeed}.
+ * REST API for {@link ChangeFeedModule}.
  */
 @Controller
 @RequestMapping("/changefeed")
 public class ChangeFeedApi {
 
-    private final ChangeFeed changeFeed;
+    private final ChangeRepository changeRepository;
 
     @Autowired
     public ChangeFeedApi(GraphDatabaseService database) {
-        changeFeed = new ChangeFeed(database);
+        changeRepository = new GraphChangeRepository(database);
 
     }
-
 
     /**
      * Get a list of changes made to the graph, where each item represents all changes made within a transaction.
      *
      * @param since sequence number (optional). All changes with sequence number greater than this parameter are returned.
-     * @return List of {@link com.graphaware.module.changefeed.ChangeSet}, latest change first
+     * @param limit maximum number of changes to return (optional). Note that this is upper limit only, there might not be that many changes.
+     * @return List of {@link com.graphaware.module.changefeed.ChangeSet}, latest change first.
      */
     @RequestMapping(method = RequestMethod.GET)
     @ResponseBody
-    public List<ChangeSet> getChangeFeed(@RequestParam(value = "since", required = false) Integer since) {
-        return changeFeed.getChanges(since);
+    public List<ChangeSet> getChangeFeed(@RequestParam(value = "since", required = false) Integer since, @RequestParam(value = "limit", required = false) Integer limit) {
+        if (since == null && limit == null) {
+            return changeRepository.getAllChanges();
+        }
+
+        if (since == null) {
+            return changeRepository.getNumberOfChanges(limit);
+        }
+
+        if (limit == null) {
+            return changeRepository.getChangesSince(since);
+        }
+
+        return changeRepository.getNumberOfChangesSince(since, limit);
     }
 }

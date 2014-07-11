@@ -17,7 +17,6 @@
 package com.graphaware.module.changefeed;
 
 import com.graphaware.runtime.config.TxDrivenModuleConfiguration;
-import com.graphaware.runtime.metadata.EmptyContext;
 import com.graphaware.runtime.metadata.NodeBasedContext;
 import com.graphaware.runtime.module.BaseTxDrivenModule;
 import com.graphaware.runtime.module.TimerDrivenModule;
@@ -42,7 +41,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     public static final int PRUNE_DELAY = 5000;
     private final ChangeFeedConfiguration configuration;
 
-    private final ChangeFeed changeFeed;
+    private final GraphChangeRepository changeFeed;
     private AtomicInteger sequence = null;
     private GraphDatabaseService database;
 
@@ -50,7 +49,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         super(moduleId);
         this.configuration = configuration;
         this.database = database;
-        this.changeFeed = new ChangeFeed(database);
+        this.changeFeed = new GraphChangeRepository(database);
     }
 
     @Override
