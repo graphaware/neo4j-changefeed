@@ -18,7 +18,7 @@ package com.graphaware.module.changefeed;
 
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
-import junit.framework.Assert;
+import com.graphaware.runtime.metadata.EmptyContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,17 +38,18 @@ import static org.neo4j.tooling.GlobalGraphOperations.at;
 public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     private GraphDatabaseService database;
-    private GraphChangeRepository changeFeed;
-
+    private ChangeReader changeReader;
+    private ChangeFeedModule module;
 
     @Before
     public void setUp() {
         database = new TestGraphDatabaseFactory().newImpermanentDatabase();
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database);
-        runtime.registerModule(new ChangeFeedModule("CFM", new ChangeFeedConfiguration(3), database));
+        module = new ChangeFeedModule("CFM", new ChangeFeedConfiguration(3), database);
+        runtime.registerModule(module);
         runtime.start();
 
-        changeFeed = new GraphChangeRepository(database);
+        changeReader = new GraphChangeReader(database);
     }
 
     @After
@@ -58,7 +59,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     @Test
     public void feedShouldBeEmptyOnANewDatabase() {
-        List<ChangeSet> changes = changeFeed.getAllChanges();
+        List<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(0, changes.size());
     }
 
@@ -114,7 +115,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             tx.success();
         }
 
-        List<ChangeSet> changes = changeFeed.getAllChanges();
+        List<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(3, changes.size());
 
         ChangeSet set1 = changes.get(0);
@@ -173,7 +174,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             node2.delete();
             tx.success();
         }
-        List<ChangeSet> changes = changeFeed.getNumberOfChanges(3);
+        List<ChangeSet> changes = changeReader.getNumberOfChanges(3);
         assertEquals(3, changes.size());
 
         ChangeSet set1 = changes.get(0);
@@ -228,10 +229,10 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             node2.delete();
             tx.success();
         }
-        List<ChangeSet> changes = changeFeed.getNumberOfChanges(3);
+        List<ChangeSet> changes = changeReader.getNumberOfChanges(3);
         assertEquals(3, changes.size());
 
-        changes = changeFeed.getChangesSince(2);
+        changes = changeReader.getChangesSince(2);
         assertEquals(2, changes.size());
 
         ChangeSet set1 = changes.get(0);
@@ -290,7 +291,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             tx.success();
         }
 
-        List<ChangeSet> changes = changeFeed.getAllChanges();
+        List<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(2, changes.size());
 
         ChangeSet set1 = changes.get(0);
@@ -321,16 +322,16 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
                 tx.success();
             }
         }
-        List<ChangeSet> changes = changeFeed.getAllChanges();
-        Assert.assertEquals(20, changes.size());
-        changes = changeFeed.getChangesSince(5);
-        Assert.assertEquals(15, changes.size());
-        Assert.assertEquals(20, changes.get(0).getSequence());
-        changeFeed.pruneChanges(10);
-        Assert.assertEquals(10, changeFeed.getAllChanges().size());
-        changes = changeFeed.getChangesSince(5);
-        Assert.assertEquals(10, changes.size());
-        Assert.assertEquals(20, changes.get(0).getSequence());
+        List<ChangeSet> changes = changeReader.getAllChanges();
+        assertEquals(20, changes.size());
+        changes = changeReader.getChangesSince(5);
+        assertEquals(15, changes.size());
+        assertEquals(20, changes.get(0).getSequence());
+        module.doSomeWork(new EmptyContext(), database);
+        assertEquals(3, changeReader.getAllChanges().size());
+        changes = changeReader.getChangesSince(5);
+        assertEquals(3, changes.size());
+        assertEquals(20, changes.get(0).getSequence());
 
     }
 
@@ -345,10 +346,10 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             }
         }
         //Feed should not be pruned because it has not exceeded the maxChanges by 10
-        List<ChangeSet> changes = changeFeed.getAllChanges();
-        Assert.assertEquals(10, changes.size());
+        List<ChangeSet> changes = changeReader.getAllChanges();
+        assertEquals(10, changes.size());
         Thread.sleep(6000);  //Wait for pruning to kick in
-        Assert.assertEquals(10, changes.size());
+        assertEquals(10, changes.size());
 
         //Add 10 more changes
         for (int i = 1; i <= 10; i++) {
@@ -359,7 +360,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             }
         }
         Thread.sleep(6000);  //Wait for pruning to kick in
-        changes = changeFeed.getAllChanges();
-        Assert.assertEquals(3, changes.size());
+        changes = changeReader.getAllChanges();
+        assertEquals(3, changes.size());
     }
 }

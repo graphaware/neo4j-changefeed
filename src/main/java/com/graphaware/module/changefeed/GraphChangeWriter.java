@@ -20,8 +20,6 @@ import org.neo4j.graphdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,11 +33,11 @@ import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
- * {@link ChangeRepository} that keeps the changes stored in the graph.
+ * {@link ChangeWriter} that keeps the changes stored in the graph.
  */
-public class GraphChangeRepository implements ChangeRepository {
+public class GraphChangeWriter implements ChangeWriter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(GraphChangeRepository.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GraphChangeWriter.class);
 
     private static final int PRUNE_WHEN_MAX_EXCEEDED_BY = 10;
 
@@ -53,7 +51,7 @@ public class GraphChangeRepository implements ChangeRepository {
      *
      * @param database in which to store the changes.
      */
-    public GraphChangeRepository(GraphDatabaseService database) {
+    public GraphChangeWriter(GraphDatabaseService database) {
         this.database = database;
     }
 
@@ -66,77 +64,6 @@ public class GraphChangeRepository implements ChangeRepository {
         initializeSequence();
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<ChangeSet> getAllChanges() {
-        return getChanges(Integer.MAX_VALUE);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<ChangeSet> getNumberOfChanges(int limit) {
-        return getChanges(limit);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<ChangeSet> getChangesSince(int since) {
-        return getNumberOfChangesSince(since, Integer.MAX_VALUE);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<ChangeSet> getNumberOfChangesSince(int since, int limit) {
-        return doGetChanges(since, limit);
-    }
-
-
-    private List<ChangeSet> getChanges(int limit) {
-        return doGetChanges(null, limit);
-    }
-
-
-    /**
-     * Get a list of changes from the graph.
-     *
-     * @param since the sequence number of the first change that will not be included in the result
-     * @param limit number of changes to fetch
-     * @return List of {@link ChangeSet}, latest change first.
-     */
-    private List<ChangeSet> doGetChanges(Integer since, int limit) {
-        int count = 0;
-        List<ChangeSet> changeFeed = new ArrayList<>();
-        Node start = getOrCreateRoot();
-
-        try (Transaction tx = database.beginTx()) {
-            tx.acquireWriteLock(start); //We should not have to do this, temp workaround for https://github.com/neo4j/neo4j/issues/2660
-            Relationship nextRel = start.getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
-
-            while (count < limit && nextRel != null) {
-                Node changeNode = nextRel.getEndNode();
-
-                ChangeSet changeSet = new ChangeSet((long) changeNode.getProperty(SEQUENCE), (long) changeNode.getProperty(TIMESTAMP));
-                if (since != null && changeSet.getSequence() <= since) {
-                    break;
-                }
-                changeSet.addChanges((String[]) changeNode.getProperty(CHANGES));
-                changeFeed.add(changeSet);
-                count++;
-
-                nextRel = changeNode.getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
-            }
-            tx.success();
-        }
-        return changeFeed;
-    }
 
     /**
      * {@inheritDoc}
@@ -232,10 +159,9 @@ public class GraphChangeRepository implements ChangeRepository {
      *
      * @return root, will never be null.
      */
-    private Node getRoot() {    //TODO think we shouldn't have this because it is null depending on how this object was constructed
+    private Node getRoot() {
         if (root == null) {
-            root = getOrCreateRoot();
-            //throw new IllegalStateException("There is not ChangeFeed Root! This is a bug. It looks like the start() method hasn't been called.");
+            throw new IllegalStateException("There is not ChangeFeed Root! This is a bug. It looks like the start() method hasn't been called.");
         }
         return root;
     }

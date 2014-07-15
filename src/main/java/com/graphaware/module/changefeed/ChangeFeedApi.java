@@ -33,11 +33,11 @@ import java.util.List;
 @RequestMapping("/changefeed")
 public class ChangeFeedApi {
 
-    private final ChangeRepository changeRepository;
+    private final ChangeReader changeReader;
 
     @Autowired
     public ChangeFeedApi(GraphDatabaseService database) {
-        changeRepository = new GraphChangeRepository(database);
+        changeReader = new GraphChangeReader(database);
 
     }
 
@@ -52,17 +52,17 @@ public class ChangeFeedApi {
     @ResponseBody
     public List<ChangeSet> getChangeFeed(@RequestParam(value = "since", required = false) Integer since, @RequestParam(value = "limit", required = false) Integer limit) {
         if (since == null && limit == null) {
-            return changeRepository.getAllChanges();
+            return changeReader.getAllChanges();
         }
 
         if (since == null) {
-            return changeRepository.getNumberOfChanges(limit);
+            return changeReader.getNumberOfChanges(limit);
         }
 
         if (limit == null) {
-            return changeRepository.getChangesSince(since);
+            return changeReader.getChangesSince(since);
         }
 
-        return changeRepository.getNumberOfChangesSince(since, limit);
+        return changeReader.getNumberOfChangesSince(since, limit);
     }
 }

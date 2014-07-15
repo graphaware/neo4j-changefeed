@@ -32,12 +32,12 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     private static final int PRUNE_DELAY = 5000;
 
     private final ChangeFeedConfiguration configuration;
-    private final GraphChangeRepository repository;
+    private final GraphChangeWriter changeWriter;
 
     public ChangeFeedModule(String moduleId, ChangeFeedConfiguration configuration, GraphDatabaseService database) {
         super(moduleId);
         this.configuration = configuration;
-        this.repository = new GraphChangeRepository(database);
+        this.changeWriter = new GraphChangeWriter(database);
     }
 
     /**
@@ -45,7 +45,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
      */
     @Override
     public void start(GraphDatabaseService database) {
-        repository.initialize();
+        changeWriter.initialize();
     }
 
     /**
@@ -61,7 +61,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
      */
     @Override
     public Void beforeCommit(ImprovedTransactionData transactionData) {
-        repository.recordChanges(transactionData.mutationsToStrings());
+        changeWriter.recordChanges(transactionData.mutationsToStrings());
         return null;
     }
 
@@ -78,7 +78,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
      */
     @Override
     public EmptyContext doSomeWork(EmptyContext lastContext, GraphDatabaseService database) {
-        repository.pruneChanges(configuration.getMaxChanges());
+        changeWriter.pruneChanges(configuration.getMaxChanges());
         return new EmptyContext(System.currentTimeMillis() + PRUNE_DELAY);
     }
 }

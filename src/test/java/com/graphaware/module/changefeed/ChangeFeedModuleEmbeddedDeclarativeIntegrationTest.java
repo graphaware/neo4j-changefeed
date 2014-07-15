@@ -29,7 +29,8 @@ import static junit.framework.Assert.assertTrue;
 
 public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest extends DatabaseIntegrationTest {
 
-    private GraphChangeRepository changeFeed;
+    private ChangeWriter changeWriter;
+    private ChangeReader changeReader;
 
     @Override
     protected GraphDatabaseService createDatabase() {
@@ -40,7 +41,8 @@ public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest extends Database
 
     public void setUp() throws Exception {
         super.setUp();
-        changeFeed = new GraphChangeRepository(getDatabase());
+        changeWriter = new GraphChangeWriter(getDatabase());
+        changeReader = new GraphChangeReader(getDatabase());
     }
 
     @Test
@@ -70,7 +72,7 @@ public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest extends Database
             tx.success();
         }
 
-        List<ChangeSet> changes = changeFeed.getAllChanges();
+        List<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(3, changes.size());
 
         ChangeSet set1 = changes.get(0);
