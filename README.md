@@ -19,7 +19,7 @@ com.graphaware.module.CFM.1=com.graphaware.module.changefeed.ChangeFeedModuleBoo
 com.graphaware.module.CFM.maxChanges=100
 
 com.graphaware.module.CFM.maxChanges limits the total number of changes tracked. The default is 100.
-Note that for efficiency, the total number of changes at any given point may be 5 more than the maxChanges set but will eventually constrain the size to 100.
+Note that for efficiency, the total number of changes at any given point may be 10 more than the maxChanges set but will eventually constrain the size to 100.
 
 ### Embedded Mode / Java Development
 
@@ -32,10 +32,8 @@ To use the ChangeFeed programmatically, register the module like this
 
 ```java
  GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database);
- Map<String, String> config = new HashMap<>();
- config.put("maxChanges", "50");
-
- runtime.registerModule(new ChangeFeedModule("CFM", database, config));
+ ChangeFeedConfiguration config = new ChangeFeedConfiguration(100); // where 100 is the value of maxChanges
+ runtime.registerModule(new ChangeFeedModule("CFM", config, database));
  ChangeFeed changeFeed = new ChangeFeed(database);
 ```
 Alternatively:
@@ -56,33 +54,32 @@ The ChangeFeed is accessible via the REST or Java API.
 
 When deployed in server mode, there are two URLs that you can issue GET requests to:
 * `http://your-server-address:7474/graphaware/changefeed/` to get a list of changes made to the graph, most recent change first.
-* `http://your-server-address:7474/graphaware/changefeed?since={sequence}` to get a list of changes made to the graph after a particular change (most recent change first). {sequence} must be replaced with the sequence number of the change.
+* `http://your-server-address:7474/graphaware/changefeed?since={sequence}&limit={limit}` to get a list of changes made to the graph after a particular change (most recent change first).
+ {sequence} is optional and must be replaced with the sequence number of the change if used. The change represented by this {sequence} will NOT be returned.
+ {limit} is optional and if used, must be replaced with the maximum number of changes to return.
 
 The REST API a JSON array of changesets. A changeset contains the following:
 
 * sequence - the sequence number of the changeset
 * changeDate - timestamp of the changeset (represented as the number of milliseconds since 1/1/1970)
 * changes - an array of Strings representing each modification to the graph that occurred in the same transaction
-* changeDateFormatted- a human readable representation of changeDate of the format yyyy-MM-dd HH:mm:ss.SSSZ
 
 e.g.
 ```json
 [
     {
-        "sequence": 7,
-        "changeDate": 1405076533589,
-        "changes": [
-            "Created node (:Person {name: John})"
-        ],
-        "changeDateFormatted": "2014-07-11 16:32:13.589+0530"
-    },
-    {
-        "sequence": 6,
-        "changeDate": 1405076513162,
+        "sequence": 2,
+        "timestamp": 1405411937335,
         "changes": [
             "Created node (:Person {name: Doe})"
-        ],
-        "changeDateFormatted": "2014-07-11 16:31:53.162+0530"
+        ]
+    },
+    {
+        "sequence": 1,
+        "timestamp": 1405411933210,
+        "changes": [
+            "Created node (:Person {name: John})"
+        ]
     }
 ]
 ```
