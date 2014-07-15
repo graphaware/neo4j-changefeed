@@ -16,13 +16,13 @@
 
 package com.graphaware.module.changefeed;
 
-import org.neo4j.cypher.javacompat.ExecutionEngine;
-import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
@@ -41,14 +41,10 @@ public class GraphChangeRepository implements ChangeRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphChangeRepository.class);
 
-    //todo index on sequence
-    //todo rewrite in Java?
-    //todo if sequence number does not exist any more (was pruned), nothing is returned
-    private static final String CHANGES_SINCE_QUERY = "MATCH (startChange:_GA_ChangeSet {sequence: {sequence}}) WITH startChange MATCH (startChange)<-[:_GA_CHANGEFEED_NEXT_CHANGE*..]-(change:_GA_ChangeSet) RETURN change ORDER BY change.sequence desc";
+    //todo if sequence number does not exist any more (was pruned), nothing is returned  [bug]
     private static final int PRUNE_WHEN_MAX_EXCEEDED_BY = 10;
 
     private final GraphDatabaseService database;
-    private final ExecutionEngine executionEngine;
 
     private AtomicInteger sequence = null;
     private Node root;
@@ -60,7 +56,6 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     public GraphChangeRepository(GraphDatabaseService database) {
         this.database = database;
-        executionEngine = new ExecutionEngine(database);
     }
 
     /**
@@ -77,7 +72,7 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public List<ChangeSet> getAllChanges() {
-        return getNumberOfChanges(Integer.MAX_VALUE);
+        return getChanges(Integer.MAX_VALUE);
     }
 
     /**
@@ -85,7 +80,7 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public List<ChangeSet> getNumberOfChanges(int limit) {
-        return getChanges("MATCH (root:_GA_ChangeFeed)-[:_GA_CHANGEFEED_NEXT_CHANGE*.." + limit + "]->(change) RETURN change", Collections.<String, Object>emptyMap());
+        return getChanges(limit);
     }
 
     /**
@@ -93,7 +88,7 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public List<ChangeSet> getChangesSince(int since) {
-        return getChanges(CHANGES_SINCE_QUERY, Collections.<String, Object>singletonMap(SEQUENCE, since));
+        return getNumberOfChangesSince(since, Integer.MAX_VALUE);
     }
 
     /**
@@ -101,47 +96,48 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public List<ChangeSet> getNumberOfChangesSince(int since, int limit) {
-        return getChanges("MATCH (startChange:_GA_ChangeSet {sequence: {sequence}}) WITH startChange MATCH (startChange)<-[:_GA_CHANGEFEED_NEXT_CHANGE*.." + limit + "]-(change:_GA_ChangeSet) RETURN change ORDER BY change.sequence desc", Collections.<String, Object>singletonMap(SEQUENCE, since));
+        return doGetChanges(since, limit);
     }
 
-    private List<ChangeSet> getChanges(String query, Map<String, Object> params) {
-        try {
-            return doGetChanges(query, params);
-        } catch (Exception e) {
-            LOG.error("Could not fetch changeFeed on first attempt", e);
-        }
 
-        try {
-            return doGetChanges(query, params);
-        } catch (Exception e) {     //We hope not to reach here
-            LOG.error("Could not fetch changeFeed on second attempt", e);
-            throw e;
-        }
+    private List<ChangeSet> getChanges(int limit) {
+        return doGetChanges(null, limit);
     }
+
 
     /**
      * Get a list of changes from the graph.
      *
-     * @param query  to get changes.
-     * @param params for the query, may not be null (but can be empty).
+     * @param since the sequence number of the first change that will not be included in the result
+     * @param limit number of changes to fetch
      * @return List of {@link ChangeSet}, latest change first.
      */
-    private List<ChangeSet> doGetChanges(String query, Map<String, Object> params) {
-        List<ChangeSet> changeFeed = new LinkedList<>();
+    private List<ChangeSet> doGetChanges(Integer since, int limit) {
+        int count = 0;
+        List<ChangeSet> changeFeed = new ArrayList<>();
+        Node start = getOrCreateRoot();
 
-        ExecutionResult result;
         try (Transaction tx = database.beginTx()) {
-            result = executionEngine.execute(query, params);
-            Iterator<Node> changeNodes = result.columnAs("change");
-            while (changeNodes.hasNext()) {
-                Node changeNode = changeNodes.next();
+            tx.acquireWriteLock(start);
+            Relationship nextRel = start.getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
+
+            while (count < limit && nextRel != null) {
+                Node changeNode = nextRel.getEndNode();
+                LOG.info("*** node id {}", changeNode.getId());
+                LOG.info("*** seq property {}", changeNode.getProperty(SEQUENCE));
+
                 ChangeSet changeSet = new ChangeSet((long) changeNode.getProperty(SEQUENCE), (long) changeNode.getProperty(TIMESTAMP));
+                if (since != null && changeSet.getSequence() <= since) {
+                    break;
+                }
                 changeSet.addChanges((String[]) changeNode.getProperty(CHANGES));
                 changeFeed.add(changeSet);
+                count++;
+
+                nextRel = changeNode.getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
             }
             tx.success();
         }
-
         return changeFeed;
     }
 
@@ -150,20 +146,16 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public void recordChanges(Set<String> changes) {
-        ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet()); //TODO might this result in holes if a runtime exception is thrown at the end of this module or any other
-        changeSet.addChanges(changes);
-        recordChange(changeSet);
-    }
-
-    private void recordChange(ChangeSet changeSet) {
         try (Transaction tx = database.beginTx()) {
+            tx.acquireWriteLock(getRoot());
+
+            ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet()); //TODO might this result in holes if a runtime exception is thrown at the end of this module or any other
+            changeSet.addChanges(changes);
 
             Node changeNode = database.createNode(_GA_ChangeSet);
             changeNode.setProperty(SEQUENCE, changeSet.getSequence());
             changeNode.setProperty(TIMESTAMP, changeSet.getTimestamp());
             changeNode.setProperty(CHANGES, changeSet.getChangesAsArray());
-
-            tx.acquireWriteLock(getRoot());
 
             Relationship firstChangeRel = getRoot().getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
             if (firstChangeRel == null) { //First changeSet recorded, create an _GA_CHANGEFEED_OLDEST_CHANGE relation from the root to it
@@ -226,6 +218,8 @@ public class GraphChangeRepository implements ChangeRepository {
             if (root == null) {
                 LOG.info("Creating the ChangeFeed Root");
                 root = database.createNode(Labels._GA_ChangeFeed);
+                //Create a unique constraint on sequence
+                database.schema().constraintFor(Labels._GA_ChangeSet).assertPropertyIsUnique(Properties.SEQUENCE);
             }
             tx.success();
         }
@@ -238,7 +232,7 @@ public class GraphChangeRepository implements ChangeRepository {
      *
      * @return root, will never be null.
      */
-    private Node getRoot() {
+    private Node getRoot() {    //TODO think we shouldn't have this because it is null depending on how this object was constructed
         if (root == null) {
             throw new IllegalStateException("There is not ChangeFeed Root! This is a bug. It looks like the start() method hasn't been called.");
         }
