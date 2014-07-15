@@ -17,16 +17,14 @@
 package com.graphaware.module.changefeed;
 
 import com.graphaware.test.integration.DatabaseIntegrationTest;
-import junit.framework.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
-import java.util.Date;
 import java.util.List;
 
-import static junit.framework.Assert.*;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 
 
 public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest extends DatabaseIntegrationTest {

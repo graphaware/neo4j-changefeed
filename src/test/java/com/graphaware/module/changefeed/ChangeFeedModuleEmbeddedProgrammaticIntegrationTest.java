@@ -18,6 +18,7 @@ package com.graphaware.module.changefeed;
 
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
+import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -309,5 +310,55 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     }
 
-    //TODO write a test for feed pruning
+    @Test
+    public void fetchingChangesFromASequenceThatHasBeenPrunedShouldReturnEverything() {
+        //Create 20 changes
+        for (int i = 1; i <= 20; i++) {
+            try (Transaction tx = database.beginTx()) {
+                Node node = database.createNode();
+                node.setProperty("age", i);
+                tx.success();
+            }
+        }
+        List<ChangeSet> changes = changeFeed.getAllChanges();
+        Assert.assertEquals(20, changes.size());
+        changes = changeFeed.getChangesSince(5);
+        Assert.assertEquals(15, changes.size());
+        Assert.assertEquals(20, changes.get(0).getSequence());
+        changeFeed.pruneChanges(10);
+        Assert.assertEquals(10, changeFeed.getAllChanges().size());
+        changes = changeFeed.getChangesSince(5);
+        Assert.assertEquals(10, changes.size());
+        Assert.assertEquals(20, changes.get(0).getSequence());
+
+    }
+
+    @Test
+    public void feedShouldBePruned() throws InterruptedException {
+        //Create 10 changes
+        for (int i = 1; i <= 10; i++) {
+            try (Transaction tx = database.beginTx()) {
+                Node node = database.createNode();
+                node.setProperty("age", i);
+                tx.success();
+            }
+        }
+        //Feed should not be pruned because it has not exceeded the maxChanges by 10
+        List<ChangeSet> changes = changeFeed.getAllChanges();
+        Assert.assertEquals(10, changes.size());
+        Thread.sleep(6000);  //Wait for pruning to kick in
+        Assert.assertEquals(10, changes.size());
+
+        //Add 10 more changes
+        for (int i = 1; i <= 10; i++) {
+            try (Transaction tx = database.beginTx()) {
+                Node node = database.createNode();
+                node.setProperty("age", i);
+                tx.success();
+            }
+        }
+        Thread.sleep(6000);  //Wait for pruning to kick in
+        changes = changeFeed.getAllChanges();
+        Assert.assertEquals(3, changes.size());
+    }
 }

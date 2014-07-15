@@ -41,7 +41,6 @@ public class GraphChangeRepository implements ChangeRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphChangeRepository.class);
 
-    //todo if sequence number does not exist any more (was pruned), nothing is returned  [bug]
     private static final int PRUNE_WHEN_MAX_EXCEEDED_BY = 10;
 
     private final GraphDatabaseService database;
@@ -118,7 +117,7 @@ public class GraphChangeRepository implements ChangeRepository {
         Node start = getOrCreateRoot();
 
         try (Transaction tx = database.beginTx()) {
-            tx.acquireWriteLock(start);
+            tx.acquireWriteLock(start); //We should not have to do this, temp workaround for https://github.com/neo4j/neo4j/issues/2660
             Relationship nextRel = start.getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
 
             while (count < limit && nextRel != null) {
@@ -178,30 +177,33 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     @Override
     public void pruneChanges(int keep) {
-        Relationship oldestChangeRel = getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING);
-        if (oldestChangeRel != null) {
-            Node oldestNode = oldestChangeRel.getEndNode();
-            Node newestNode = getRoot().getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING).getEndNode();
-            if (newestNode != null) {
-                long highSequence = (long) newestNode.getProperty(SEQUENCE);
-                long lowSequence = (long) oldestNode.getProperty(SEQUENCE);
-                long nodesToDelete = ((highSequence - lowSequence) + 1) - keep;
-                Node newOldestNode = null;
-                if (nodesToDelete >= PRUNE_WHEN_MAX_EXCEEDED_BY) {
-                    LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
-                    getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING).delete();
-                    while (nodesToDelete > 0) {
-                        Relationship rel = oldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
-                        newOldestNode = rel.getStartNode();
-                        rel.delete();
-                        oldestNode.delete();
-                        oldestNode = newOldestNode;
-                        nodesToDelete--;
+        try (Transaction tx = database.beginTx()) {
+            Relationship oldestChangeRel = getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING);
+            if (oldestChangeRel != null) {
+                Node oldestNode = oldestChangeRel.getEndNode();
+                Node newestNode = getRoot().getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING).getEndNode();
+                if (newestNode != null) {
+                    long highSequence = (long) newestNode.getProperty(SEQUENCE);
+                    long lowSequence = (long) oldestNode.getProperty(SEQUENCE);
+                    long nodesToDelete = ((highSequence - lowSequence) + 1) - keep;
+                    Node newOldestNode = null;
+                    if (nodesToDelete >= PRUNE_WHEN_MAX_EXCEEDED_BY) {
+                        LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
+                        getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING).delete();
+                        while (nodesToDelete > 0) {
+                            Relationship rel = oldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
+                            newOldestNode = rel.getStartNode();
+                            rel.delete();
+                            oldestNode.delete();
+                            oldestNode = newOldestNode;
+                            nodesToDelete--;
+                        }
+                        getRoot().createRelationshipTo(newOldestNode, _GA_CHANGEFEED_OLDEST_CHANGE);
+                        LOG.info("ChangeFeed pruning complete");
                     }
-                    getRoot().createRelationshipTo(newOldestNode, _GA_CHANGEFEED_OLDEST_CHANGE);
-                    LOG.info("ChangeFeed pruning complete");
                 }
             }
+            tx.success();
         }
     }
 
@@ -234,7 +236,8 @@ public class GraphChangeRepository implements ChangeRepository {
      */
     private Node getRoot() {    //TODO think we shouldn't have this because it is null depending on how this object was constructed
         if (root == null) {
-            throw new IllegalStateException("There is not ChangeFeed Root! This is a bug. It looks like the start() method hasn't been called.");
+            root = getOrCreateRoot();
+            //throw new IllegalStateException("There is not ChangeFeed Root! This is a bug. It looks like the start() method hasn't been called.");
         }
         return root;
     }

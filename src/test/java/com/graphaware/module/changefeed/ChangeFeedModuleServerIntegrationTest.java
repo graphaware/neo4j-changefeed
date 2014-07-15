@@ -17,13 +17,12 @@
 package com.graphaware.module.changefeed;
 
 import com.graphaware.test.integration.NeoServerIntegrationTest;
-import junit.framework.Assert;
 import org.apache.http.HttpStatus;
 import org.junit.Test;
 
 import static com.graphaware.test.util.TestUtils.executeCypher;
 import static com.graphaware.test.util.TestUtils.get;
-import static junit.framework.Assert.*;
+import static junit.framework.Assert.assertTrue;
 
 
 public class ChangeFeedModuleServerIntegrationTest extends NeoServerIntegrationTest {
