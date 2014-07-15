@@ -73,7 +73,7 @@ public class GraphChangeWriter implements ChangeWriter {
         try (Transaction tx = database.beginTx()) {
             tx.acquireWriteLock(getRoot());
 
-            ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet()); //TODO might this result in holes if a runtime exception is thrown at the end of this module or any other
+            ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet());
             changeSet.addChanges(changes);
 
             Node changeNode = database.createNode(_GA_ChangeSet);

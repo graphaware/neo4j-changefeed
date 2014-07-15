@@ -23,9 +23,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.event.TransactionData;
+import org.neo4j.graphdb.event.TransactionEventHandler;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
 import static com.graphaware.module.changefeed.Properties.SEQUENCE;
@@ -362,5 +367,52 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         Thread.sleep(6000);  //Wait for pruning to kick in
         changes = changeReader.getAllChanges();
         assertEquals(3, changes.size());
+    }
+
+    @Test
+    public void sequenceNumbersShouldBeOrdered() throws InterruptedException {
+        //slow down the first tx:
+        database.registerTransactionEventHandler(new TransactionEventHandler.Adapter<Void>() {
+            protected volatile boolean hasRun = false;
+
+            @Override
+            public Void beforeCommit(TransactionData data) throws Exception {
+                if (!hasRun) {
+                    hasRun = true;
+                    Thread.sleep(100);
+                }
+                return null;
+            }
+        });
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                try (Transaction tx = database.beginTx()) {
+                    database.createNode().setProperty("name", "One");
+                    tx.success();
+                }
+            }
+        });
+
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                try (Transaction tx = database.beginTx()) {
+                    database.createNode().setProperty("name", "Two");
+                    tx.success();
+                }
+            }
+        });
+
+        executor.shutdown();
+        executor.awaitTermination(1000, TimeUnit.MILLISECONDS);
+
+        List<ChangeSet> changes = changeReader.getAllChanges();
+        assertEquals(2, changes.size());
+        assertEquals(2, changes.get(0).getSequence());
+        assertEquals(1, changes.get(1).getSequence());
     }
 }

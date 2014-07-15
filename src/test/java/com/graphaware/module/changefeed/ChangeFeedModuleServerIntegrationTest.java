@@ -18,7 +18,12 @@ package com.graphaware.module.changefeed;
 
 import com.graphaware.test.integration.NeoServerIntegrationTest;
 import org.apache.http.HttpStatus;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static com.graphaware.test.util.TestUtils.executeCypher;
 import static com.graphaware.test.util.TestUtils.get;
@@ -39,7 +44,22 @@ public class ChangeFeedModuleServerIntegrationTest extends NeoServerIntegrationT
     public void graphChangesShouldAppearInChangeFeed() {
         executeCypher(baseUrl(), "CREATE (p:Person {name: 'MB'})");
         assertTrue(get(baseUrl() + "/graphaware/changefeed", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
+    }
 
+    @Test
+    @Ignore("just to have a look at http://localhost:7575")
+    public void test() throws InterruptedException {
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
 
+        for (int i = 0; i < 100; i++) {
+            executorService.submit(new Runnable() {
+                @Override
+                public void run() {
+                    executeCypher(baseUrl(), "CREATE (p:Person {name: 'Person" + UUID.randomUUID() + "'})");
+                }
+            });
+        }
+
+        Thread.sleep(10000000);
     }
 }
