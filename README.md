@@ -1,7 +1,7 @@
 GraphAware Neo4j ChangeFeed
 ================
 
-GraphAware ChangeFeed is a GraphAware Runtime Module that keeps track of changes made to the graph.
+GraphAware ChangeFeed is a [GraphAware](https://github.com/graphaware/neo4j-framework) Runtime Module that keeps track of changes made to the graph.
 
 Getting the Software
 --------------------
@@ -35,14 +35,16 @@ To use the ChangeFeed programmatically, register the module like this
  ChangeFeedConfiguration config = new ChangeFeedConfiguration(100); // where 100 is the value of maxChanges
  runtime.registerModule(new ChangeFeedModule("CFM", config, database));
  ChangeFeed changeFeed = new ChangeFeed(database);
+ runtime.start();
 ```
+
 Alternatively:
 ```java
  GraphDatabaseService database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(pathToDb)
     .loadPropertiesFromFile(this.getClass().getClassLoader().getResource("neo4j.properties").getPath())
     .newGraphDatabase();
  
- ChangeFeed changeFeed = new ChangeFeed(database);
+ //make sure neo4j.properties contain the lines mentioned in previous section
 ```
 
 Using GraphAware ChangeFeed
@@ -61,7 +63,7 @@ When deployed in server mode, there are two URLs that you can issue GET requests
 The REST API a JSON array of changesets. A changeset contains the following:
 
 * sequence - the sequence number of the changeset
-* changeDate - timestamp of the changeset (represented as the number of milliseconds since 1/1/1970)
+* timestamp - timestamp of the changeset (represented as the number of milliseconds since 1/1/1970)
 * changes - an array of Strings representing each modification to the graph that occurred in the same transaction
 
 e.g.
@@ -83,6 +85,11 @@ e.g.
     }
 ]
 ```
+
+*NOTE*: Please note that timestamps and sequence numbers are assigned at the instant when the transaction starts committing.
+Consequently, the order does not represent the order in which the transactions have been committed. Also, there can
+be missing sequence numbers if a transaction failed to commit for whatever reason.
+
 ### Java API
 
 Java API has the same functionality as the rest API. Please refer to the Javadoc (link it)
