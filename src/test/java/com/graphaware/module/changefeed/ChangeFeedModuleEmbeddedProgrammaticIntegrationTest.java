@@ -45,8 +45,9 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
     public void setUp() {
         database = new TestGraphDatabaseFactory().newImpermanentDatabase();
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database);
-        ChangeFeedConfiguration config = new ChangeFeedConfiguration(3);
-        runtime.registerModule(new ChangeFeedModule("CFM", config, database));
+        runtime.registerModule(new ChangeFeedModule("CFM", new ChangeFeedConfiguration(3), database));
+        runtime.start();
+
         changeFeed = new GraphChangeRepository(database);
     }
 
