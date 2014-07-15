@@ -122,8 +122,6 @@ public class GraphChangeRepository implements ChangeRepository {
 
             while (count < limit && nextRel != null) {
                 Node changeNode = nextRel.getEndNode();
-                LOG.info("*** node id {}", changeNode.getId());
-                LOG.info("*** seq property {}", changeNode.getProperty(SEQUENCE));
 
                 ChangeSet changeSet = new ChangeSet((long) changeNode.getProperty(SEQUENCE), (long) changeNode.getProperty(TIMESTAMP));
                 if (since != null && changeSet.getSequence() <= since) {
