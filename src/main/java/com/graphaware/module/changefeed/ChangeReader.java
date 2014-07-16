@@ -28,7 +28,7 @@ public interface ChangeReader {
      * @param since sequence number of the first change that will <b>not</b> be included in the result.
      * @return changes, latest one first.
      */
-    List<ChangeSet> getChangesSince(int since);
+    List<ChangeSet> getChangesSince(long since);
 
     /**
      * Get latest changes since a certain point.
@@ -38,5 +38,5 @@ public interface ChangeReader {
      * @return changes, latest one first. Note that if there are more changes since the given sequence number than the limit,
      *         the latest limit number of changes will be returned.
      */
-    List<ChangeSet> getNumberOfChangesSince(int since, int limit);
+    List<ChangeSet> getNumberOfChangesSince(long since, int limit);
 }

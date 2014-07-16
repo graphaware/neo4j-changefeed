@@ -32,10 +32,10 @@ To use the ChangeFeed programmatically, register the module like this
 
 ```java
  GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database);
- ChangeFeedConfiguration config = new ChangeFeedConfiguration(100); // where 100 is the value of maxChanges
- runtime.registerModule(new ChangeFeedModule("CFM", config, database));
- ChangeFeed changeFeed = new ChangeFeed(database);
+ ChangeFeedModule module = new ChangeFeedModule("CFM", new ChangeFeedConfiguration(100), database);    //where 100 is the maxChanges configuration
+ runtime.registerModule(module);
  runtime.start();
+ ChangeReader changeReader = new GraphChangeReader(database);
 ```
 
 Alternatively:

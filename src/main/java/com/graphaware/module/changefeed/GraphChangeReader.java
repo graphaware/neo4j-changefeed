@@ -65,9 +65,10 @@ public class GraphChangeReader implements ChangeReader {
 
     /**
      * {@inheritDoc}
+     * @param since
      */
     @Override
-    public List<ChangeSet> getChangesSince(int since) {
+    public List<ChangeSet> getChangesSince(long since) {
         return getNumberOfChangesSince(since, Integer.MAX_VALUE);
     }
 
@@ -75,7 +76,7 @@ public class GraphChangeReader implements ChangeReader {
      * {@inheritDoc}
      */
     @Override
-    public List<ChangeSet> getNumberOfChangesSince(int since, int limit) {
+    public List<ChangeSet> getNumberOfChangesSince(long since, int limit) {
         return doGetChanges(since, limit);
     }
 
@@ -86,7 +87,7 @@ public class GraphChangeReader implements ChangeReader {
      * @param limit number of changes to fetch
      * @return List of {@link com.graphaware.module.changefeed.ChangeSet}, latest change first.
      */
-    private List<ChangeSet> doGetChanges(Integer since, int limit) {
+    private List<ChangeSet> doGetChanges(Long since, int limit) {
         int count = 0;
         List<ChangeSet> changeFeed = new ArrayList<>();
         Node start = getRoot();
