@@ -16,11 +16,12 @@
 
 package com.graphaware.module.changefeed;
 
-import junit.framework.Assert;
 import org.junit.Test;
 
 import java.util.Collection;
 import java.util.Iterator;
+
+import static junit.framework.Assert.assertEquals;
 
 
 public class ChangeSetQueueTest {
@@ -39,11 +40,11 @@ public class ChangeSetQueueTest {
         queue.add(c3);
         queue.add(c4);
 
-        Assert.assertEquals(3, queue.getAllChanges().size());
+        assertEquals(3, queue.getAllChanges().size());
         Iterator<ChangeSet> it = queue.getAllChanges().iterator();
-        Assert.assertEquals(4, it.next().getSequence());
-        Assert.assertEquals(3, it.next().getSequence());
-        Assert.assertEquals(2, it.next().getSequence());
+        assertEquals(4, it.next().getSequence());
+        assertEquals(3, it.next().getSequence());
+        assertEquals(2, it.next().getSequence());
 
     }
 
@@ -61,11 +62,11 @@ public class ChangeSetQueueTest {
         queue.add(c3);
         queue.add(c4);
 
-        Assert.assertEquals(3, queue.getAllChanges().size());
+        assertEquals(3, queue.getAllChanges().size());
         Collection<ChangeSet> changes = queue.getLimitedChanges(2);
-        Assert.assertEquals(2, changes.size());
+        assertEquals(2, changes.size());
         Iterator<ChangeSet> it = queue.getAllChanges().iterator();
-        Assert.assertEquals(4, it.next().getSequence());
-        Assert.assertEquals(3, it.next().getSequence());
+        assertEquals(4, it.next().getSequence());
+        assertEquals(3, it.next().getSequence());
     }
 }
