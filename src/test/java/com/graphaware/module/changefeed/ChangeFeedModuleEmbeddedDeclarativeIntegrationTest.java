@@ -21,7 +21,8 @@ import org.junit.Test;
 import org.neo4j.graphdb.*;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
-import java.util.List;
+import java.util.Collection;
+import java.util.Iterator;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
@@ -72,22 +73,23 @@ public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest extends Database
             tx.success();
         }
 
-        List<ChangeSet> changes = changeReader.getAllChanges();
+        Collection<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(3, changes.size());
+        Iterator<ChangeSet> it = changes.iterator();
 
-        ChangeSet set1 = changes.get(0);
+        ChangeSet set1 = it.next();
         long set1Date = set1.getTimestamp();
         assertEquals(2, set1.getChanges().size());
         assertTrue(set1.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
 
 
-        ChangeSet set2 = changes.get(1);
+        ChangeSet set2 = it.next();
         long set2Date = set2.getTimestamp();
         assertEquals(1, set2.getChanges().size());
         assertTrue(set2.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
 
-        ChangeSet set3 = changes.get(2);
+        ChangeSet set3 = it.next();
         long set3Date = set3.getTimestamp();
         assertEquals(3, set3.getChanges().size());
         assertTrue(set3.getChanges().contains("Created node (:Company)"));

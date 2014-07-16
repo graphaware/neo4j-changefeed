@@ -18,7 +18,6 @@ package com.graphaware.module.changefeed;
 
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
-import com.graphaware.runtime.metadata.EmptyContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,7 +26,8 @@ import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
-import java.util.List;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -64,7 +64,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     @Test
     public void feedShouldBeEmptyOnANewDatabase() {
-        List<ChangeSet> changes = changeReader.getAllChanges();
+        Collection<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(0, changes.size());
     }
 
@@ -120,23 +120,23 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             tx.success();
         }
 
-        List<ChangeSet> changes = changeReader.getAllChanges();
+        Collection<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(3, changes.size());
-
-        ChangeSet set1 = changes.get(0);
+        Iterator<ChangeSet> it = changes.iterator();
+        ChangeSet set1 = it.next();
         long set1Date = set1.getTimestamp();
         assertEquals(2, set1.getChanges().size());
         assertTrue(set1.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
         assertEquals(set1.getSequence(), 3);
 
-        ChangeSet set2 = changes.get(1);
+        ChangeSet set2 = it.next();
         long set2Date = set2.getTimestamp();
         assertEquals(1, set2.getChanges().size());
         assertTrue(set2.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
         assertEquals(2, set2.getSequence());
 
-        ChangeSet set3 = changes.get(2);
+        ChangeSet set3 = it.next();
         long set3Date = set3.getTimestamp();
         assertEquals(3, set3.getChanges().size());
         assertTrue(set3.getChanges().contains("Created node (:Company)"));
@@ -179,23 +179,24 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             node2.delete();
             tx.success();
         }
-        List<ChangeSet> changes = changeReader.getNumberOfChanges(3);
+        Collection<ChangeSet> changes = changeReader.getNumberOfChanges(3);
         assertEquals(3, changes.size());
+        Iterator<ChangeSet> it = changes.iterator();
 
-        ChangeSet set1 = changes.get(0);
+        ChangeSet set1 = it.next();
         long set1Date = set1.getTimestamp();
         assertEquals(1, set1.getChanges().size());
         assertTrue(set1.getChanges().contains("Deleted node ({name: GraphAware})"));
 
 
-        ChangeSet set2 = changes.get(1);
+        ChangeSet set2 = it.next();
         long set2Date = set2.getTimestamp();
         assertEquals(2, set2.getChanges().size());
         assertTrue(set2.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         assertTrue(set2.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
 
 
-        ChangeSet set3 = changes.get(2);
+        ChangeSet set3 = it.next();
         long set3Date = set3.getTimestamp();
         assertEquals(1, set3.getChanges().size());
         assertTrue(set3.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
@@ -234,19 +235,19 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             node2.delete();
             tx.success();
         }
-        List<ChangeSet> changes = changeReader.getNumberOfChanges(3);
+        Collection<ChangeSet> changes = changeReader.getNumberOfChanges(3);
         assertEquals(3, changes.size());
 
+        Iterator<ChangeSet> it = changes.iterator();
         changes = changeReader.getChangesSince(2);
         assertEquals(2, changes.size());
 
-        ChangeSet set1 = changes.get(0);
+        ChangeSet set1 = it.next();
         assertEquals(1, set1.getChanges().size());
         assertTrue(set1.getChanges().contains("Deleted node ({name: GraphAware})"));
         assertEquals(4, set1.getSequence());
 
-
-        ChangeSet set2 = changes.get(1);
+        ChangeSet set2 = it.next();
         assertEquals(2, set2.getChanges().size());
         assertTrue(set2.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         assertTrue(set2.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
@@ -296,16 +297,17 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
             tx.success();
         }
 
-        List<ChangeSet> changes = changeReader.getAllChanges();
+        Collection<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(2, changes.size());
+        Iterator<ChangeSet> it = changes.iterator();
 
-        ChangeSet set1 = changes.get(0);
+        ChangeSet set1 = it.next();
         long set1Date = set1.getTimestamp();
         assertEquals(1, set1.getChanges().size());
         assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
         assertEquals(set1.getSequence(), 2);
 
-        ChangeSet set2 = changes.get(1);
+        ChangeSet set2 = it.next();
         long set2Date = set2.getTimestamp();
         assertEquals(3, set2.getChanges().size());
         assertTrue(set2.getChanges().contains("Created node (:Company)"));
@@ -317,57 +319,6 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     }
 
-    @Test
-    public void fetchingChangesFromASequenceThatHasBeenPrunedShouldReturnEverything() {
-        //Create 20 changes
-        for (int i = 1; i <= 20; i++) {
-            try (Transaction tx = database.beginTx()) {
-                Node node = database.createNode();
-                node.setProperty("age", i);
-                tx.success();
-            }
-        }
-        List<ChangeSet> changes = changeReader.getAllChanges();
-        assertEquals(20, changes.size());
-        changes = changeReader.getChangesSince(5);
-        assertEquals(15, changes.size());
-        assertEquals(20, changes.get(0).getSequence());
-        module.doSomeWork(new EmptyContext(), database);
-        assertEquals(3, changeReader.getAllChanges().size());
-        changes = changeReader.getChangesSince(5);
-        assertEquals(3, changes.size());
-        assertEquals(20, changes.get(0).getSequence());
-
-    }
-
-    @Test
-    public void feedShouldBePruned() throws InterruptedException {
-        //Create 10 changes
-        for (int i = 1; i <= 10; i++) {
-            try (Transaction tx = database.beginTx()) {
-                Node node = database.createNode();
-                node.setProperty("age", i);
-                tx.success();
-            }
-        }
-        //Feed should not be pruned because it has not exceeded the maxChanges by 10
-        List<ChangeSet> changes = changeReader.getAllChanges();
-        assertEquals(10, changes.size());
-        Thread.sleep(6000);  //Wait for pruning to kick in
-        assertEquals(10, changes.size());
-
-        //Add 10 more changes
-        for (int i = 1; i <= 10; i++) {
-            try (Transaction tx = database.beginTx()) {
-                Node node = database.createNode();
-                node.setProperty("age", i);
-                tx.success();
-            }
-        }
-        Thread.sleep(6000);  //Wait for pruning to kick in
-        changes = changeReader.getAllChanges();
-        assertEquals(3, changes.size());
-    }
 
     @Test
     public void sequenceNumbersShouldBeOrdered() throws InterruptedException {
@@ -410,9 +361,11 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         executor.shutdown();
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS);
 
-        List<ChangeSet> changes = changeReader.getAllChanges();
+        Collection<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(2, changes.size());
-        assertEquals(2, changes.get(0).getSequence());
-        assertEquals(1, changes.get(1).getSequence());
+        Iterator<ChangeSet> it = changes.iterator();
+
+        assertEquals(2, it.next().getSequence());
+        assertEquals(1, it.next().getSequence());
     }
 }

@@ -23,6 +23,8 @@ import com.graphaware.runtime.module.TimerDrivenModule;
 import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
 import org.neo4j.graphdb.GraphDatabaseService;
 
+import java.util.Collection;
+
 /**
  * A {@link com.graphaware.runtime.module.TxDrivenModule} that keeps track of changes in the graph.
  * Also implements {@link TimerDrivenModule} to perform pruning of old changes.
@@ -33,11 +35,17 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
 
     private final ChangeFeedConfiguration configuration;
     private final GraphChangeWriter changeWriter;
+    private final GraphChangeReader changeReader;
+
+    private ChangeSetQueue changes;
 
     public ChangeFeedModule(String moduleId, ChangeFeedConfiguration configuration, GraphDatabaseService database) {
         super(moduleId);
         this.configuration = configuration;
         this.changeWriter = new GraphChangeWriter(database);
+        this.changeReader = new GraphChangeReader(database);
+        ChangeFeedFactory.initialize(configuration.getMaxChanges());
+        this.changes = ChangeFeedFactory.getInstance();
     }
 
     /**
@@ -46,6 +54,9 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     @Override
     public void start(GraphDatabaseService database) {
         changeWriter.initialize();
+        //Initialize the in memory changes by loading from the graph
+        Collection<ChangeSet> loadedChanges = changeReader.initialize(configuration.getMaxChanges());
+        changes.addAll(loadedChanges);
     }
 
     /**

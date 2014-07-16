@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
@@ -47,37 +48,46 @@ public class GraphChangeReader implements ChangeReader {
         this.database = database;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public List<ChangeSet> getAllChanges() {
-        return doGetChanges(null, Integer.MAX_VALUE);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<ChangeSet> getNumberOfChanges(int limit) {
+    public Collection<ChangeSet> initialize(int limit) {
         return doGetChanges(null, limit);
+
     }
 
     /**
      * {@inheritDoc}
+     */
+    @Override
+    public Collection<ChangeSet> getAllChanges() {
+        return ChangeFeedFactory.getInstance().getAllChanges();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Collection<ChangeSet> getNumberOfChanges(int limit) {
+        return ChangeFeedFactory.getInstance().getLimitedChanges(limit);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
      * @param since
      */
     @Override
-    public List<ChangeSet> getChangesSince(long since) {
-        return getNumberOfChangesSince(since, Integer.MAX_VALUE);
+    public Collection<ChangeSet> getChangesSince(long since) {
+        return ChangeFeedFactory.getInstance().getChangesSince(since);
+        //return getNumberOfChangesSince(since, Integer.MAX_VALUE);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public List<ChangeSet> getNumberOfChangesSince(long since, int limit) {
-        return doGetChanges(since, limit);
+    public Collection<ChangeSet> getNumberOfChangesSince(long since, int limit) {
+        return ChangeFeedFactory.getInstance().getChangesSince(since, limit);
+        //return doGetChanges(since, limit);
     }
 
     /**

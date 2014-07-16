@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.util.List;
+import java.util.Collection;
 
 /**
  * REST API for {@link ChangeFeedModule}.
@@ -46,11 +46,11 @@ public class ChangeFeedApi {
      *
      * @param since sequence number (optional). All changes with sequence number greater than this parameter are returned.
      * @param limit maximum number of changes to return (optional). Note that this is upper limit only, there might not be that many changes.
-     * @return List of {@link com.graphaware.module.changefeed.ChangeSet}, latest change first.
+     * @return Collection of {@link com.graphaware.module.changefeed.ChangeSet}, latest change first.
      */
     @RequestMapping(method = RequestMethod.GET)
     @ResponseBody
-    public List<ChangeSet> getChangeFeed(@RequestParam(value = "since", required = false) Integer since, @RequestParam(value = "limit", required = false) Integer limit) {
+    public Collection<ChangeSet> getChangeFeed(@RequestParam(value = "since", required = false) Integer since, @RequestParam(value = "limit", required = false) Integer limit) {
         if (since == null && limit == null) {
             return changeReader.getAllChanges();
         }
