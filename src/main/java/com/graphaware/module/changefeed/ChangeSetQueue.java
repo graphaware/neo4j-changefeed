@@ -31,7 +31,7 @@ public class ChangeSetQueue {
     }
 
     void add(ChangeSet changeSet) {
-        if (changes.size() == maxCapacity) {
+        while (changes.size() >= maxCapacity) {
             changes.removeLast();
         }
         changes.addFirst(changeSet);
