@@ -20,6 +20,10 @@ import org.junit.Test;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static junit.framework.Assert.assertEquals;
 
@@ -68,5 +72,25 @@ public class ChangeSetQueueTest {
         Iterator<ChangeSet> it = queue.getAllChanges().iterator();
         assertEquals(4, it.next().getSequence());
         assertEquals(3, it.next().getSequence());
+    }
+
+    @Test
+    public void survivesHeavyConcurrency() throws InterruptedException {
+        final ChangeSetQueue queue = new ChangeSetQueue(10);
+        final AtomicLong sequence = new AtomicLong(0);
+
+        ExecutorService executor = Executors.newFixedThreadPool(100);
+        for (int i = 0; i < 1000; i++) {
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    queue.add(new ChangeSet(sequence.incrementAndGet()));
+                }
+            });
+        }
+        executor.shutdown();
+        executor.awaitTermination(1, TimeUnit.MINUTES);
+
+        assertEquals(10, queue.getAllChanges().size());
     }
 }
