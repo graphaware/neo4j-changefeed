@@ -75,7 +75,7 @@ public class GraphChangeWriter implements ChangeWriter {
 
             ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet());
             changeSet.addChanges(changes);
-            ChangeFeedFactory.getInstance().add(changeSet);
+            ChangeFeedFactory.getInstance().push(changeSet);
             Node changeNode = database.createNode(_GA_ChangeSet);
             changeNode.setProperty(SEQUENCE, changeSet.getSequence());
             changeNode.setProperty(TIMESTAMP, changeSet.getTimestamp());

@@ -59,7 +59,7 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getAllChanges() {
-        return ChangeFeedFactory.getInstance().getAllChanges();
+        return ChangeFeedFactory.getInstance().getChanges();
     }
 
     /**
@@ -67,7 +67,7 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getNumberOfChanges(int limit) {
-        return ChangeFeedFactory.getInstance().getLimitedChanges(limit);
+        return ChangeFeedFactory.getInstance().getChanges(limit);
     }
 
     /**
@@ -86,7 +86,7 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getNumberOfChangesSince(long since, int limit) {
-        return ChangeFeedFactory.getInstance().getChangesSince(since, limit);
+        return ChangeFeedFactory.getInstance().getChanges(since, limit);
         //return doGetChanges(since, limit);
     }
 

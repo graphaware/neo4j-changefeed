@@ -17,9 +17,9 @@
 package com.graphaware.module.changefeed;
 
 public class ChangeFeedFactory {
-    private static ChangeSetQueue ourInstance = null;
+    private static ChangeSetCache ourInstance = null;
 
-    public static ChangeSetQueue getInstance() {
+    public static ChangeSetCache getInstance() {
         if (ourInstance == null) {
             throw new IllegalStateException("ChangeFeedFactory has not been initialized");
         }
@@ -27,7 +27,7 @@ public class ChangeFeedFactory {
     }
 
     public static void initialize(int maxChanges) {
-        ourInstance = new ChangeSetQueue(maxChanges);
+        ourInstance = new ChangeSetCache(maxChanges);
     }
 
     private ChangeFeedFactory() {

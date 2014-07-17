@@ -29,24 +29,24 @@ import java.util.concurrent.atomic.AtomicLong;
 import static junit.framework.Assert.assertEquals;
 
 
-public class ChangeSetQueueTest {
+public class ChangeSetCacheTest {
 
     @Test
     public void capacityShouldNotBeExceeded() {
-        ChangeSetQueue queue = new ChangeSetQueue(3);
+        ChangeSetCache queue = new ChangeSetCache(3);
 
         ChangeSet c1 = new ChangeSet(1);
         ChangeSet c2 = new ChangeSet(2);
         ChangeSet c3 = new ChangeSet(3);
         ChangeSet c4 = new ChangeSet(4);
 
-        queue.add(c1);
-        queue.add(c2);
-        queue.add(c3);
-        queue.add(c4);
+        queue.push(c1);
+        queue.push(c2);
+        queue.push(c3);
+        queue.push(c4);
 
-        assertEquals(3, queue.getAllChanges().size());
-        Iterator<ChangeSet> it = queue.getAllChanges().iterator();
+        assertEquals(3, queue.getChanges().size());
+        Iterator<ChangeSet> it = queue.getChanges().iterator();
         assertEquals(4, it.next().getSequence());
         assertEquals(3, it.next().getSequence());
         assertEquals(2, it.next().getSequence());
@@ -55,29 +55,29 @@ public class ChangeSetQueueTest {
 
     @Test
     public void changesReturnedShouldNotExceedLimit() {
-        ChangeSetQueue queue = new ChangeSetQueue(3);
+        ChangeSetCache queue = new ChangeSetCache(3);
 
         ChangeSet c1 = new ChangeSet(1);
         ChangeSet c2 = new ChangeSet(2);
         ChangeSet c3 = new ChangeSet(3);
         ChangeSet c4 = new ChangeSet(4);
 
-        queue.add(c1);
-        queue.add(c2);
-        queue.add(c3);
-        queue.add(c4);
+        queue.push(c1);
+        queue.push(c2);
+        queue.push(c3);
+        queue.push(c4);
 
-        assertEquals(3, queue.getAllChanges().size());
-        Collection<ChangeSet> changes = queue.getLimitedChanges(2);
+        assertEquals(3, queue.getChanges().size());
+        Collection<ChangeSet> changes = queue.getChanges(2);
         assertEquals(2, changes.size());
-        Iterator<ChangeSet> it = queue.getAllChanges().iterator();
+        Iterator<ChangeSet> it = queue.getChanges().iterator();
         assertEquals(4, it.next().getSequence());
         assertEquals(3, it.next().getSequence());
     }
 
     @Test
     public void survivesHeavyConcurrency() throws InterruptedException {
-        final ChangeSetQueue queue = new ChangeSetQueue(10);
+        final ChangeSetCache queue = new ChangeSetCache(10);
         final AtomicLong sequence = new AtomicLong(0);
         final AtomicBoolean failure = new AtomicBoolean(false);
 
@@ -86,13 +86,13 @@ public class ChangeSetQueueTest {
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
-                    queue.add(new ChangeSet(sequence.incrementAndGet()));
+                    queue.push(new ChangeSet(sequence.incrementAndGet()));
                 }
             });
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
-                    if (10 < queue.getAllChanges().size()) {
+                    if (10 < queue.getChanges().size()) {
                         failure.set(true);
                     }
                 }
@@ -101,7 +101,7 @@ public class ChangeSetQueueTest {
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
 
-        assertEquals(10, queue.getAllChanges().size());
+        assertEquals(10, queue.getChanges().size());
 //        assertFalse(failure.get()); //this fails, but we don't care, eventually it's 10
     }
 }

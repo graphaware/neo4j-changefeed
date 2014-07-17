@@ -37,7 +37,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     private final GraphChangeWriter changeWriter;
     private final GraphChangeReader changeReader;
 
-    private ChangeSetQueue changes;
+    private ChangeSetCache changes;
 
     public ChangeFeedModule(String moduleId, ChangeFeedConfiguration configuration, GraphDatabaseService database) {
         super(moduleId);
@@ -56,7 +56,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         changeWriter.initialize();
         //Initialize the in memory changes by loading from the graph
         Collection<ChangeSet> loadedChanges = changeReader.initialize(configuration.getMaxChanges());
-        changes.addAll(loadedChanges);
+        changes.populate(loadedChanges);
     }
 
     /**
