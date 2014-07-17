@@ -43,7 +43,7 @@ public class ChangeFeedModuleServerIntegrationTest extends NeoServerIntegrationT
     @Test
     public void graphChangesShouldAppearInChangeFeed() {
         executeCypher(baseUrl(), "CREATE (p:Person {name: 'MB'})");
-        assertTrue(get(baseUrl() + "/graphaware/changefeed", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
+        assertTrue(get(baseUrl() + "/graphaware/changefeed/CFM/", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
     }
 
     @Test

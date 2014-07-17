@@ -19,10 +19,7 @@ package com.graphaware.module.changefeed;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Collection;
 
@@ -33,12 +30,11 @@ import java.util.Collection;
 @RequestMapping("/changefeed")
 public class ChangeFeedApi {
 
-    private final ChangeReader changeReader;
+    private final GraphDatabaseService database;
 
     @Autowired
     public ChangeFeedApi(GraphDatabaseService database) {
-        changeReader = new GraphChangeReader(database);
-
+        this.database = database;
     }
 
     /**
@@ -48,9 +44,11 @@ public class ChangeFeedApi {
      * @param limit maximum number of changes to return (optional). Note that this is upper limit only, there might not be that many changes.
      * @return Collection of {@link com.graphaware.module.changefeed.ChangeSet}, latest change first.
      */
-    @RequestMapping(method = RequestMethod.GET)
+    @RequestMapping(value = "/{moduleId}", method = RequestMethod.GET)
     @ResponseBody
-    public Collection<ChangeSet> getChangeFeed(@RequestParam(value = "since", required = false) Integer since, @RequestParam(value = "limit", required = false) Integer limit) {
+    public Collection<ChangeSet> getChangeFeed(@PathVariable String moduleId, @RequestParam(value = "since", required = false) Integer since, @RequestParam(value = "limit", required = false) Integer limit) {
+        ChangeReader changeReader = new GraphChangeReader(database, moduleId);
+
         if (since == null && limit == null) {
             return changeReader.getAllChanges();
         }

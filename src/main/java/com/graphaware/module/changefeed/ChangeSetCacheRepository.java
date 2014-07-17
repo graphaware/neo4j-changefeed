@@ -16,20 +16,23 @@
 
 package com.graphaware.module.changefeed;
 
-public class ChangeFeedFactory {
-    private static ChangeSetCache ourInstance = null;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-    public static ChangeSetCache getInstance() {
-        if (ourInstance == null) {
-            throw new IllegalStateException("ChangeFeedFactory has not been initialized");
+public class ChangeSetCacheRepository {
+
+    private final Map<String, ChangeSetCache> caches = new ConcurrentHashMap<>();
+
+    public void registerCache(String moduleId, ChangeSetCache cache) {
+        caches.put(moduleId, cache);
+    }
+
+    public ChangeSetCache getCache(String moduleId) {
+        if (!caches.containsKey(moduleId)) {
+            throw new IllegalStateException("There is no change set cache for module ID " + moduleId + "." +
+                    " Please check that the module has been registered with GraphAware Runtime and that the Runtime has been started.");
         }
-        return ourInstance;
-    }
 
-    public static void initialize(int maxChanges) {
-        ourInstance = new ChangeSetCache(maxChanges);
-    }
-
-    private ChangeFeedFactory() {
+        return caches.get(moduleId);
     }
 }

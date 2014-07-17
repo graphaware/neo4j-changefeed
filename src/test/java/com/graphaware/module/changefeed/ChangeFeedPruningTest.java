@@ -37,7 +37,6 @@ public class ChangeFeedPruningTest {
     private GraphDatabaseService database;
     private ChangeReader changeReader;
     private ChangeFeedModule module;
-    private ChangeWriter changeWriter;
 
     @Before
     public void setUp() {
@@ -47,9 +46,7 @@ public class ChangeFeedPruningTest {
         runtime.registerModule(module);
         runtime.start();
 
-        changeReader = new GraphChangeReader(database);
-        changeWriter = new GraphChangeWriter(database);
-        changeWriter.initialize();
+        changeReader = new GraphChangeReader(database, "CFM");
     }
 
     @After

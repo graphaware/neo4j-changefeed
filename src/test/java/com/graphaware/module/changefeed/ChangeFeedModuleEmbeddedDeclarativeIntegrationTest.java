@@ -30,7 +30,6 @@ import static junit.framework.Assert.assertTrue;
 
 public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest extends DatabaseIntegrationTest {
 
-    private ChangeWriter changeWriter;
     private ChangeReader changeReader;
 
     @Override
@@ -42,8 +41,7 @@ public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest extends Database
 
     public void setUp() throws Exception {
         super.setUp();
-        changeWriter = new GraphChangeWriter(getDatabase());
-        changeReader = new GraphChangeReader(getDatabase());
+        changeReader = new GraphChangeReader(getDatabase(), "CFM");
     }
 
     @Test

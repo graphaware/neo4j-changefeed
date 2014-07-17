@@ -54,7 +54,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         runtime.registerModule(module);
         runtime.start();
 
-        changeReader = new GraphChangeReader(database);
+        changeReader = new GraphChangeReader(database, "CFM");
     }
 
     @After

@@ -38,14 +38,16 @@ public class GraphChangeReader implements ChangeReader {
     private final GraphDatabaseService database;
 
     private Node root;
+    private final ChangeSetCache cache;
 
     /**
      * Construct a new repository.
      *
      * @param database in which to store the changes.
      */
-    public GraphChangeReader(GraphDatabaseService database) {
+    public GraphChangeReader(GraphDatabaseService database, String moduleId) {
         this.database = database;
+        this.cache = ChangeFeedModule.getCache(moduleId);
     }
 
     @Override
@@ -59,7 +61,7 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getAllChanges() {
-        return ChangeFeedFactory.getInstance().getChanges();
+        return cache.getChanges();
     }
 
     /**
@@ -67,7 +69,7 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getNumberOfChanges(int limit) {
-        return ChangeFeedFactory.getInstance().getChanges(limit);
+        return  cache.getChanges(limit);
     }
 
     /**
@@ -77,7 +79,7 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getChangesSince(long since) {
-        return ChangeFeedFactory.getInstance().getChangesSince(since);
+        return  cache.getChangesSince(since);
         //return getNumberOfChangesSince(since, Integer.MAX_VALUE);
     }
 
@@ -86,7 +88,7 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getNumberOfChangesSince(long since, int limit) {
-        return ChangeFeedFactory.getInstance().getChanges(since, limit);
+        return  cache.getChanges(since, limit);
         //return doGetChanges(since, limit);
     }
 

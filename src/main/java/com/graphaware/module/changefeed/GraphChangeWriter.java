@@ -45,14 +45,16 @@ public class GraphChangeWriter implements ChangeWriter {
 
     private AtomicInteger sequence = null;
     private Node root;
+    private final ChangeSetCache cache;
 
     /**
      * Construct a new repository.
      *
      * @param database in which to store the changes.
      */
-    public GraphChangeWriter(GraphDatabaseService database) {
+    public GraphChangeWriter(GraphDatabaseService database, ChangeSetCache cache) {
         this.database = database;
+        this.cache = cache;
     }
 
     /**
@@ -75,7 +77,7 @@ public class GraphChangeWriter implements ChangeWriter {
 
             ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet());
             changeSet.addChanges(changes);
-            ChangeFeedFactory.getInstance().push(changeSet);
+            cache.push(changeSet);
             Node changeNode = database.createNode(_GA_ChangeSet);
             changeNode.setProperty(SEQUENCE, changeSet.getSequence());
             changeNode.setProperty(TIMESTAMP, changeSet.getTimestamp());

@@ -33,19 +33,24 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
 
     private static final int PRUNE_DELAY = 5000;
 
+    private static final ChangeSetCacheRepository CACHE_REPOSITORY = new ChangeSetCacheRepository();
+
+    public static ChangeSetCache getCache(String moduleId) {
+        return CACHE_REPOSITORY.getCache(moduleId);
+    }
+
     private final ChangeFeedConfiguration configuration;
     private final GraphChangeWriter changeWriter;
     private final GraphChangeReader changeReader;
-
-    private ChangeSetCache changes;
+    private final ChangeSetCache changesCache;
 
     public ChangeFeedModule(String moduleId, ChangeFeedConfiguration configuration, GraphDatabaseService database) {
         super(moduleId);
         this.configuration = configuration;
-        this.changeWriter = new GraphChangeWriter(database);
-        this.changeReader = new GraphChangeReader(database);
-        ChangeFeedFactory.initialize(configuration.getMaxChanges());
-        this.changes = ChangeFeedFactory.getInstance();
+        this.changesCache = new ChangeSetCache(configuration.getMaxChanges());
+        CACHE_REPOSITORY.registerCache(moduleId, changesCache);
+        this.changeReader = new GraphChangeReader(database, moduleId);
+        this.changeWriter = new GraphChangeWriter(database, changesCache);
     }
 
     /**
@@ -54,9 +59,8 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     @Override
     public void start(GraphDatabaseService database) {
         changeWriter.initialize();
-        //Initialize the in memory changes by loading from the graph
-        Collection<ChangeSet> loadedChanges = changeReader.initialize(configuration.getMaxChanges());
-        changes.populate(loadedChanges);
+        Collection<ChangeSet> initialize = changeReader.initialize(configuration.getMaxChanges());
+        changesCache.populate(initialize);
     }
 
     /**
