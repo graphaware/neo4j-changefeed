@@ -16,6 +16,8 @@
 
 package com.graphaware.module.changefeed;
 
+import com.graphaware.module.changefeed.cache.ChangeSetCache;
+import com.graphaware.module.changefeed.domain.ChangeSet;
 import org.junit.Test;
 
 import java.util.Collection;

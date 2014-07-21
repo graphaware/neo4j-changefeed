@@ -1,9 +1,9 @@
-package com.graphaware.module.changefeed;
+package com.graphaware.module.changefeed.io;
 
 import java.util.Set;
 
 /**
- * A writer of {@link ChangeSet}s.
+ * A writer of {@link com.graphaware.module.changefeed.domain.ChangeSet}s.
  */
 public interface ChangeWriter {
 

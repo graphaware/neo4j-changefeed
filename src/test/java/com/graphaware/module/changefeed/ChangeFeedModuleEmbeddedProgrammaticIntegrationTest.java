@@ -16,15 +16,18 @@
 
 package com.graphaware.module.changefeed;
 
+import com.graphaware.module.changefeed.cache.CachingGraphChangeReader;
+import com.graphaware.module.changefeed.domain.ChangeSet;
+import com.graphaware.module.changefeed.domain.Labels;
+import com.graphaware.module.changefeed.domain.Relationships;
+import com.graphaware.module.changefeed.io.ChangeReader;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
-import org.junit.After;
-import org.junit.Before;
+import com.graphaware.test.integration.DatabaseIntegrationTest;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
-import org.neo4j.test.TestGraphDatabaseFactory;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -33,58 +36,51 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
-import static com.graphaware.module.changefeed.Properties.SEQUENCE;
+import static com.graphaware.module.changefeed.domain.Properties.SEQUENCE;
 import static org.junit.Assert.*;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
  * Tests the module in an embedded db programmatically
  */
-public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
+public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest extends DatabaseIntegrationTest {
 
-    private GraphDatabaseService database;
     private ChangeReader changeReader;
-    private ChangeFeedModule module;
 
-    @Before
-    public void setUp() {
-        database = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database);
-        module = new ChangeFeedModule("CFM", new ChangeFeedConfiguration(3), database);
-        runtime.registerModule(module);
+    private void registerSingleModuleAndCreateReader() {
+        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase());
+        runtime.registerModule(new ChangeFeedModule("CFM", new ChangeFeedConfiguration(3), getDatabase()));
         runtime.start();
 
-        changeReader = new GraphChangeReader(database, "CFM");
-    }
-
-    @After
-    public void tearDown() {
-        database.shutdown();
+        changeReader = new CachingGraphChangeReader(getDatabase());
     }
 
     @Test
     public void feedShouldBeEmptyOnANewDatabase() {
-        Collection<ChangeSet> changes = changeReader.getAllChanges();
-        assertEquals(0, changes.size());
+        registerSingleModuleAndCreateReader();
+
+        assertEquals(0, changeReader.getAllChanges().size());
     }
 
     @Test
     public void changeRootShouldHavePointerToOldestChange() {
+        registerSingleModuleAndCreateReader();
+
         Node node1, node2;
-        try (Transaction tx = database.beginTx()) {
-            node1 = database.createNode();
+        try (Transaction tx = getDatabase().beginTx()) {
+            node1 = getDatabase().createNode();
             node1.setProperty("name", "MB");
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
-            node2 = database.createNode();
+        try (Transaction tx = getDatabase().beginTx()) {
+            node2 = getDatabase().createNode();
             node2.setProperty("name", "GraphAware");
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
-            Node changeRoot = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
+        try (Transaction tx = getDatabase().beginTx()) {
+            Node changeRoot = getSingleOrNull(at(getDatabase()).getAllNodesWithLabel(Labels._GA_ChangeFeed));
             assertNotNull(changeRoot);
             Relationship rel = changeRoot.getSingleRelationship(Relationships._GA_CHANGEFEED_OLDEST_CHANGE, Direction.OUTGOING);
             assertNotNull(rel);
@@ -95,25 +91,27 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     @Test
     public void graphChangesShouldAppearInTheChangeFeed() {
+        registerSingleModuleAndCreateReader();
+
         Node node1, node2;
-        try (Transaction tx = database.beginTx()) {
-            node1 = database.createNode();
+        try (Transaction tx = getDatabase().beginTx()) {
+            node1 = getDatabase().createNode();
             node1.setProperty("name", "MB");
             node1.addLabel(DynamicLabel.label("Person"));
-            node2 = database.createNode();
+            node2 = getDatabase().createNode();
             node2.addLabel(DynamicLabel.label("Company"));
             node1.createRelationshipTo(node2, DynamicRelationshipType.withName("WORKS_AT"));
 
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node2.setProperty("name", "GraphAware");
             node2.setProperty("location", "London");
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node1.setProperty("name", "Michal");
             node2.removeProperty("location");
             node2.removeLabel(DynamicLabel.label("Company"));
@@ -151,31 +149,33 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     @Test
     public void changeFeedSizeShouldNotBeExceeded() {
+        registerSingleModuleAndCreateReader();
+
         Node node1, node2;
-        try (Transaction tx = database.beginTx()) {
-            node1 = database.createNode();
+        try (Transaction tx = getDatabase().beginTx()) {
+            node1 = getDatabase().createNode();
             node1.setProperty("name", "MB");
             node1.addLabel(DynamicLabel.label("Person"));
-            node2 = database.createNode();
+            node2 = getDatabase().createNode();
             node2.addLabel(DynamicLabel.label("Company"));
 
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node2.setProperty("name", "GraphAware");
             node2.setProperty("location", "London");
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node1.setProperty("name", "Michal");
             node2.removeProperty("location");
             node2.removeLabel(DynamicLabel.label("Company"));
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node2.delete();
             tx.success();
         }
@@ -207,31 +207,33 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     @Test
     public void changesSinceShouldReturnOnlyChangesSinceTheSequenceProvided() {
+        registerSingleModuleAndCreateReader();
+
         Node node1, node2;
-        try (Transaction tx = database.beginTx()) {
-            node1 = database.createNode();
+        try (Transaction tx = getDatabase().beginTx()) {
+            node1 = getDatabase().createNode();
             node1.setProperty("name", "MB");
             node1.addLabel(DynamicLabel.label("Person"));
-            node2 = database.createNode();
+            node2 = getDatabase().createNode();
             node2.addLabel(DynamicLabel.label("Company"));
 
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node2.setProperty("name", "GraphAware");
             node2.setProperty("location", "London");
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node1.setProperty("name", "Michal");
             node2.removeProperty("location");
             node2.removeLabel(DynamicLabel.label("Company"));
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node2.delete();
             tx.success();
         }
@@ -257,42 +259,44 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     @Test
     public void transactionsNotCommittedShouldNotReflectInTheChangeFeed() {
+        registerSingleModuleAndCreateReader();
+
         Node node1, node2;
 
-        try (Transaction tx = database.beginTx()) {
-            database.schema()
+        try (Transaction tx = getDatabase().beginTx()) {
+            getDatabase().schema()
                     .constraintFor(DynamicLabel.label("Person"))
                     .assertPropertyIsUnique("name")
                     .create();
             tx.success();
         }
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
 
-            node1 = database.createNode();
+            node1 = getDatabase().createNode();
             node1.setProperty("name", "MB");
             node1.addLabel(DynamicLabel.label("Person"));
-            node2 = database.createNode();
+            node2 = getDatabase().createNode();
             node2.addLabel(DynamicLabel.label("Company"));
             node1.createRelationshipTo(node2, DynamicRelationshipType.withName("WORKS_AT"));
 
             tx.success();
         }
 
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node2.setProperty("name", "GraphAware");
             node2.setProperty("location", "London");
             tx.failure();
         }
 
-        try (Transaction tx = database.beginTx()) {
-            Node node3 = database.createNode();
+        try (Transaction tx = getDatabase().beginTx()) {
+            Node node3 = getDatabase().createNode();
             node3.setProperty("name", "MB");
             node3.addLabel(DynamicLabel.label("Person"));
             tx.success();
         } catch (Exception e) {
             //tx will fail due to unique constraint violation, swallow the exception and check the feed
         }
-        try (Transaction tx = database.beginTx()) {
+        try (Transaction tx = getDatabase().beginTx()) {
             node1.setProperty("name", "Michal");
             tx.success();
         }
@@ -319,11 +323,12 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
     }
 
-
     @Test
     public void sequenceNumbersShouldBeOrdered() throws InterruptedException {
+        registerSingleModuleAndCreateReader();
+
         //slow down the first tx:
-        database.registerTransactionEventHandler(new TransactionEventHandler.Adapter<Void>() {
+        getDatabase().registerTransactionEventHandler(new TransactionEventHandler.Adapter<Void>() {
             protected volatile boolean hasRun = false;
 
             @Override
@@ -341,8 +346,8 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         executor.submit(new Runnable() {
             @Override
             public void run() {
-                try (Transaction tx = database.beginTx()) {
-                    database.createNode().setProperty("name", "One");
+                try (Transaction tx = getDatabase().beginTx()) {
+                    getDatabase().createNode().setProperty("name", "One");
                     tx.success();
                 }
             }
@@ -351,8 +356,8 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
         executor.submit(new Runnable() {
             @Override
             public void run() {
-                try (Transaction tx = database.beginTx()) {
-                    database.createNode().setProperty("name", "Two");
+                try (Transaction tx = getDatabase().beginTx()) {
+                    getDatabase().createNode().setProperty("name", "Two");
                     tx.success();
                 }
             }
@@ -367,5 +372,15 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest {
 
         assertEquals(2, it.next().getSequence());
         assertEquals(1, it.next().getSequence());
+    }
+    
+    @Test
+    public void shouldBeAbleToRegisterMultipleModules() {
+        
+    }
+    
+    @Test
+    public void whenTransactionFailsChangesToNotAppear() {
+        
     }
 }

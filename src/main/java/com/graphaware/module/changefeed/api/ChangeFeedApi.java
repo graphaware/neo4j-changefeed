@@ -14,8 +14,11 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-package com.graphaware.module.changefeed;
+package com.graphaware.module.changefeed.api;
 
+import com.graphaware.module.changefeed.domain.ChangeSet;
+import com.graphaware.module.changefeed.io.ChangeReader;
+import com.graphaware.module.changefeed.io.GraphChangeReader;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -23,8 +26,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Collection;
 
+import static com.graphaware.module.changefeed.ChangeFeedModule.DEFAULT_MODULE_ID;
+
 /**
- * REST API for {@link ChangeFeedModule}.
+ * REST API for {@link com.graphaware.module.changefeed.ChangeFeedModule}.
  */
 @Controller
 @RequestMapping("/changefeed")
@@ -39,10 +44,25 @@ public class ChangeFeedApi {
 
     /**
      * Get a list of changes made to the graph, where each item represents all changes made within a transaction.
+     * Use this API if a single {@link com.graphaware.module.changefeed.ChangeFeedModule} is registered with module ID equal to {@link com.graphaware.module.changefeed.ChangeFeedModule#DEFAULT_MODULE_ID}.
      *
      * @param since sequence number (optional). All changes with sequence number greater than this parameter are returned.
      * @param limit maximum number of changes to return (optional). Note that this is upper limit only, there might not be that many changes.
-     * @return Collection of {@link com.graphaware.module.changefeed.ChangeSet}, latest change first.
+     * @return Collection of {@link com.graphaware.module.changefeed.domain.ChangeSet}, latest change first.
+     */
+    @RequestMapping(value = "/", method = RequestMethod.GET)
+    @ResponseBody
+    public Collection<ChangeSet> getChangeFeed(@RequestParam(value = "since", required = false) Integer since, @RequestParam(value = "limit", required = false) Integer limit) {
+        return getChangeFeed(DEFAULT_MODULE_ID, since, limit);
+    }
+
+    /**
+     * Get a list of changes made to the graph, where each item represents all changes made within a transaction.
+     *
+     * @param moduleId ID of the {@link com.graphaware.module.changefeed.ChangeFeedModule} that has written the changes.
+     * @param since    sequence number (optional). All changes with sequence number greater than this parameter are returned.
+     * @param limit    maximum number of changes to return (optional). Note that this is upper limit only, there might not be that many changes.
+     * @return Collection of {@link com.graphaware.module.changefeed.domain.ChangeSet}, latest change first.
      */
     @RequestMapping(value = "/{moduleId}", method = RequestMethod.GET)
     @ResponseBody

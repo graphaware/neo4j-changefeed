@@ -1,21 +1,13 @@
-package com.graphaware.module.changefeed;
+package com.graphaware.module.changefeed.io;
+
+import com.graphaware.module.changefeed.domain.ChangeSet;
 
 import java.util.Collection;
 
 /**
- * A reader of {@link com.graphaware.module.changefeed.ChangeSet}s.
+ * A reader of {@link com.graphaware.module.changefeed.domain.ChangeSet}s.
  */
 public interface ChangeReader {
-
-    /**
-     * Initialize the reader by loading the initial set of changes from the persistence.
-     * This will be called by the framework on startup.
-     *
-     * @param limit the maximum number of changes to return.
-     * @return changes, latest one first
-     */
-    Collection<ChangeSet> initialize(int limit);
-
 
     /**
      * Get all changes.

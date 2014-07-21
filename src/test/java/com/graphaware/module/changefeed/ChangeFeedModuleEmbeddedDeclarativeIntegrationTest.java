@@ -16,6 +16,9 @@
 
 package com.graphaware.module.changefeed;
 
+import com.graphaware.module.changefeed.cache.CachingGraphChangeReader;
+import com.graphaware.module.changefeed.domain.ChangeSet;
+import com.graphaware.module.changefeed.io.ChangeReader;
 import com.graphaware.test.integration.DatabaseIntegrationTest;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
@@ -41,7 +44,7 @@ public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest extends Database
 
     public void setUp() throws Exception {
         super.setUp();
-        changeReader = new GraphChangeReader(getDatabase(), "CFM");
+        changeReader = new CachingGraphChangeReader(getDatabase());
     }
 
     @Test

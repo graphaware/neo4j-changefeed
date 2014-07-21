@@ -14,26 +14,22 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-package com.graphaware.module.changefeed;
+package com.graphaware.module.changefeed.cache;
+
+import com.graphaware.module.changefeed.domain.ChangeSet;
+import com.graphaware.module.changefeed.util.BoundedConcurrentStack;
 
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
 /**
- * {@link BoundedConcurrentStack} of {@link ChangeSet}s, intended to be used as a cache of configurable number of latest
- * {@link ChangeSet}s.
+ * {@link com.graphaware.module.changefeed.util.BoundedConcurrentStack} of {@link com.graphaware.module.changefeed.domain.ChangeSet}s,
+ * intended to be used as a cache of configurable number of latest {@link com.graphaware.module.changefeed.domain.ChangeSet}s.
  */
 public class ChangeSetCache {
 
     private final BoundedConcurrentStack<ChangeSet> changes;
-
-    /**
-     * Construct a new cache with default capacity of 100.
-     */
-    public ChangeSetCache() {
-        this(100);
-    }
 
     /**
      * Construct a new cache with given capacity.
@@ -80,16 +76,7 @@ public class ChangeSetCache {
      *         of the cache, the number of changes currently in cache, and the provided limit, whichever is lower.
      */
     public Collection<ChangeSet> getChanges(int limit) {
-        List<ChangeSet> result = new LinkedList<>();
-
-        for (ChangeSet changeSet : changes) {
-            result.add(changeSet);
-            if (result.size() >= limit) {
-                return result;
-            }
-        }
-
-        return result;
+        return getChanges(-1, limit);
     }
 
     /**

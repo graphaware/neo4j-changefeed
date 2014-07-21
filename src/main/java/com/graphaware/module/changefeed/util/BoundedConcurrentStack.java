@@ -14,7 +14,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-package com.graphaware.module.changefeed;
+package com.graphaware.module.changefeed.util;
 
 import java.util.Collection;
 import java.util.Deque;

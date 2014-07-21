@@ -16,6 +16,11 @@
 
 package com.graphaware.module.changefeed;
 
+import com.graphaware.module.changefeed.cache.CachingGraphChangeWriter;
+import com.graphaware.module.changefeed.cache.ChangeSetCache;
+import com.graphaware.module.changefeed.cache.ChangeSetCacheRepository;
+import com.graphaware.module.changefeed.io.GraphChangeReader;
+import com.graphaware.module.changefeed.io.GraphChangeWriter;
 import com.graphaware.runtime.config.TxDrivenModuleConfiguration;
 import com.graphaware.runtime.metadata.EmptyContext;
 import com.graphaware.runtime.module.BaseTxDrivenModule;
@@ -23,15 +28,14 @@ import com.graphaware.runtime.module.TimerDrivenModule;
 import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
 import org.neo4j.graphdb.GraphDatabaseService;
 
-import java.util.Collection;
-
 /**
  * A {@link com.graphaware.runtime.module.TxDrivenModule} that keeps track of changes in the graph.
  * Also implements {@link TimerDrivenModule} to perform pruning of old changes.
  */
 public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerDrivenModule<EmptyContext> {
 
-    private static final int PRUNE_DELAY = 5000;
+    public static final String DEFAULT_MODULE_ID = "CFM";
+    private static final int PRUNE_DELAY = 10000;
 
     private static final ChangeSetCacheRepository CACHE_REPOSITORY = new ChangeSetCacheRepository();
 
@@ -41,7 +45,6 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
 
     private final ChangeFeedConfiguration configuration;
     private final GraphChangeWriter changeWriter;
-    private final GraphChangeReader changeReader;
     private final ChangeSetCache changesCache;
 
     public ChangeFeedModule(String moduleId, ChangeFeedConfiguration configuration, GraphDatabaseService database) {
@@ -49,8 +52,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         this.configuration = configuration;
         this.changesCache = new ChangeSetCache(configuration.getMaxChanges());
         CACHE_REPOSITORY.registerCache(moduleId, changesCache);
-        this.changeReader = new GraphChangeReader(database, moduleId);
-        this.changeWriter = new GraphChangeWriter(database, changesCache);
+        this.changeWriter = new CachingGraphChangeWriter(database, moduleId);
     }
 
     /**
@@ -59,8 +61,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     @Override
     public void start(GraphDatabaseService database) {
         changeWriter.initialize();
-        Collection<ChangeSet> initialize = changeReader.initialize(configuration.getMaxChanges());
-        changesCache.populate(initialize);
+        changesCache.populate(new GraphChangeReader(database, getId()).getAllChanges());
     }
 
     /**

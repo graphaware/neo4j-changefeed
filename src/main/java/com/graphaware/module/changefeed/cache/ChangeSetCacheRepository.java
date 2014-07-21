@@ -14,19 +14,35 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-package com.graphaware.module.changefeed;
+package com.graphaware.module.changefeed.cache;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * An in-memory repository of {@link ChangeSetCache}s keyed by ID of the {@link com.graphaware.module.changefeed.ChangeFeedModule}.
+ */
 public class ChangeSetCacheRepository {
 
     private final Map<String, ChangeSetCache> caches = new ConcurrentHashMap<>();
 
+    /**
+     * Register a cache for module ID.
+     *
+     * @param moduleId module ID.
+     * @param cache    to register.
+     */
     public void registerCache(String moduleId, ChangeSetCache cache) {
         caches.put(moduleId, cache);
     }
 
+    /**
+     * Get a cache for a module ID.
+     *
+     * @param moduleId module ID.
+     * @return the cache.
+     * @throws IllegalStateException in case there is no cache registered for the module ID.
+     */
     public ChangeSetCache getCache(String moduleId) {
         if (!caches.containsKey(moduleId)) {
             throw new IllegalStateException("There is no change set cache for module ID " + moduleId + "." +

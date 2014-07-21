@@ -14,12 +14,12 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-package com.graphaware.module.changefeed;
+package com.graphaware.module.changefeed.domain;
 
 import org.neo4j.graphdb.Label;
 
 /**
- * Labels used by the {@link ChangeFeedModule}.
+ * Labels used by the {@link com.graphaware.module.changefeed.ChangeFeedModule}.
  */
 public enum Labels implements Label {
     _GA_ChangeFeed,

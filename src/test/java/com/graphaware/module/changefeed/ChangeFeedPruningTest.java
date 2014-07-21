@@ -16,6 +16,9 @@
 
 package com.graphaware.module.changefeed;
 
+import com.graphaware.module.changefeed.domain.ChangeSet;
+import com.graphaware.module.changefeed.io.ChangeReader;
+import com.graphaware.module.changefeed.io.GraphChangeReader;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
 import com.graphaware.runtime.metadata.EmptyContext;

@@ -14,8 +14,11 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-package com.graphaware.module.changefeed;
+package com.graphaware.module.changefeed.io;
 
+import com.graphaware.module.changefeed.domain.ChangeSet;
+import com.graphaware.module.changefeed.domain.Labels;
+import com.graphaware.module.changefeed.domain.Relationships;
 import org.neo4j.graphdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,13 +27,12 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
-import static com.graphaware.module.changefeed.Labels._GA_ChangeSet;
-import static com.graphaware.module.changefeed.Properties.*;
-import static com.graphaware.module.changefeed.Relationships._GA_CHANGEFEED_NEXT_CHANGE;
-import static com.graphaware.module.changefeed.Relationships._GA_CHANGEFEED_OLDEST_CHANGE;
+import static com.graphaware.module.changefeed.domain.Labels._GA_ChangeSet;
+import static com.graphaware.module.changefeed.domain.Properties.*;
+import static com.graphaware.module.changefeed.domain.Relationships._GA_CHANGEFEED_NEXT_CHANGE;
+import static com.graphaware.module.changefeed.domain.Relationships._GA_CHANGEFEED_OLDEST_CHANGE;
 import static org.neo4j.graphdb.Direction.INCOMING;
 import static org.neo4j.graphdb.Direction.OUTGOING;
-import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
  * {@link ChangeWriter} that keeps the changes stored in the graph.
@@ -42,19 +44,20 @@ public class GraphChangeWriter implements ChangeWriter {
     private static final int PRUNE_WHEN_MAX_EXCEEDED_BY = 10;
 
     private final GraphDatabaseService database;
+    private final String moduleId;
 
     private AtomicInteger sequence = null;
     private Node root;
-    private final ChangeSetCache cache;
 
     /**
-     * Construct a new repository.
+     * Construct a new writer.
      *
      * @param database in which to store the changes.
+     * @param moduleId ID of the module storing changes.
      */
-    public GraphChangeWriter(GraphDatabaseService database, ChangeSetCache cache) {
+    public GraphChangeWriter(GraphDatabaseService database, String moduleId) {
         this.database = database;
-        this.cache = cache;
+        this.moduleId = moduleId;
     }
 
     /**
@@ -72,12 +75,20 @@ public class GraphChangeWriter implements ChangeWriter {
      */
     @Override
     public void recordChanges(Set<String> changes) {
+        ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet());
+        changeSet.addChanges(changes);
+        recordChanges(changeSet);
+    }
+
+    /**
+     * Record (persist) a set of changes.
+     *
+     * @param changeSet to record.
+     */
+    protected void recordChanges(ChangeSet changeSet) {
         try (Transaction tx = database.beginTx()) {
             tx.acquireWriteLock(getRoot());
 
-            ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet());
-            changeSet.addChanges(changes);
-            cache.push(changeSet);
             Node changeNode = database.createNode(_GA_ChangeSet);
             changeNode.setProperty(SEQUENCE, changeSet.getSequence());
             changeNode.setProperty(TIMESTAMP, changeSet.getTimestamp());
@@ -143,12 +154,11 @@ public class GraphChangeWriter implements ChangeWriter {
         Node root;
 
         try (Transaction tx = database.beginTx()) {
-            root = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
+            root = getSingleOrNull(database.findNodesByLabelAndProperty(Labels._GA_ChangeFeed, MODULE_ID, moduleId));
             if (root == null) {
-                LOG.info("Creating the ChangeFeed Root");
+                LOG.info("Creating the ChangeFeed Root for Module ID " + moduleId);
                 root = database.createNode(Labels._GA_ChangeFeed);
-                //Create a unique constraint on sequence
-                database.schema().constraintFor(Labels._GA_ChangeSet).assertPropertyIsUnique(Properties.SEQUENCE);
+                root.setProperty(MODULE_ID, moduleId);
             }
             tx.success();
         }
@@ -163,7 +173,7 @@ public class GraphChangeWriter implements ChangeWriter {
      */
     private Node getRoot() {
         if (root == null) {
-            throw new IllegalStateException("There is not ChangeFeed Root! This is a bug. It looks like the start() method hasn't been called.");
+            throw new IllegalStateException("There is no ChangeFeed Root for Module ID " + moduleId + "! This is a bug.");
         }
         return root;
     }

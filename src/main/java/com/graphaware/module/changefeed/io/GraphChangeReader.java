@@ -14,8 +14,12 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-package com.graphaware.module.changefeed;
+package com.graphaware.module.changefeed.io;
 
+import com.graphaware.module.changefeed.ChangeFeedModule;
+import com.graphaware.module.changefeed.domain.ChangeSet;
+import com.graphaware.module.changefeed.domain.Labels;
+import com.graphaware.module.changefeed.domain.Relationships;
 import org.neo4j.graphdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,35 +29,46 @@ import java.util.Collection;
 import java.util.List;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
-import static com.graphaware.module.changefeed.Properties.*;
-import static org.neo4j.tooling.GlobalGraphOperations.at;
+import static com.graphaware.module.changefeed.domain.Properties.*;
 
 /**
- * {@link com.graphaware.module.changefeed.ChangeReader} that reads the changes stored in the graph.
+ * {@link ChangeReader} that reads the changes stored in the graph.
  */
 public class GraphChangeReader implements ChangeReader {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphChangeReader.class);
 
     private final GraphDatabaseService database;
-
-    private Node root;
-    private final ChangeSetCache cache;
+    private final Node root;
 
     /**
-     * Construct a new repository.
+     * Construct a new reader.
+     * <p/>
+     * Use this API if a single {@link com.graphaware.module.changefeed.ChangeFeedModule} is registered with module ID equal to {@link com.graphaware.module.changefeed.ChangeFeedModule#DEFAULT_MODULE_ID}.
      *
-     * @param database in which to store the changes.
+     * @param database in which the changes are stored.
+     */
+    public GraphChangeReader(GraphDatabaseService database) {
+        this(database, ChangeFeedModule.DEFAULT_MODULE_ID);
+    }
+
+    /**
+     * Construct a new reader.
+     *
+     * @param database in which the changes are stored.
+     * @param moduleId ID of the module storing changes.
      */
     public GraphChangeReader(GraphDatabaseService database, String moduleId) {
         this.database = database;
-        this.cache = ChangeFeedModule.getCache(moduleId);
-    }
 
-    @Override
-    public Collection<ChangeSet> initialize(int limit) {
-        return doGetChanges(null, limit);
-
+        try (Transaction tx = database.beginTx()) {
+            root = getSingleOrNull(database.findNodesByLabelAndProperty(Labels._GA_ChangeFeed, MODULE_ID, moduleId));
+            if (root == null) {
+                LOG.error("There is no ChangeFeed Root Node for module ID " + moduleId + "! Has the ChangeFeed Module been registered with the GraphAware Runtime? Has the Runtime been started?");
+                throw new IllegalStateException("There is no ChangeFeed Root Node for module ID " + moduleId + "! Has the ChangeFeed Module been registered with the GraphAware Runtime? Has the Runtime been started?");
+            }
+            tx.success();
+        }
     }
 
     /**
@@ -61,7 +76,7 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getAllChanges() {
-        return cache.getChanges();
+        return getChangesSince(-1);
     }
 
     /**
@@ -69,18 +84,15 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getNumberOfChanges(int limit) {
-        return  cache.getChanges(limit);
+        return getNumberOfChangesSince(-1, limit);
     }
 
     /**
      * {@inheritDoc}
-     *
-     * @param since
      */
     @Override
     public Collection<ChangeSet> getChangesSince(long since) {
-        return  cache.getChangesSince(since);
-        //return getNumberOfChangesSince(since, Integer.MAX_VALUE);
+        return getNumberOfChangesSince(since, Integer.MAX_VALUE);
     }
 
     /**
@@ -88,31 +100,29 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getNumberOfChangesSince(long since, int limit) {
-        return  cache.getChanges(since, limit);
-        //return doGetChanges(since, limit);
+        return doGetChanges(since, limit);
     }
 
     /**
      * Get a list of changes from the graph.
      *
-     * @param since the sequence number of the first change that will not be included in the result
+     * @param since the sequence number of the first change that will not be included in the result, use -1 for all.
      * @param limit number of changes to fetch
-     * @return List of {@link com.graphaware.module.changefeed.ChangeSet}, latest change first.
+     * @return List of {@link com.graphaware.module.changefeed.domain.ChangeSet}, latest change first.
      */
-    private List<ChangeSet> doGetChanges(Long since, int limit) {
+    protected Collection<ChangeSet> doGetChanges(long since, int limit) {
         int count = 0;
         List<ChangeSet> changeFeed = new ArrayList<>();
-        Node start = getRoot();
 
         try (Transaction tx = database.beginTx()) {
-            tx.acquireWriteLock(start); //We should not have to do this, temp workaround for https://github.com/neo4j/neo4j/issues/2677
-            Relationship nextRel = start.getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
+            tx.acquireWriteLock(root); //We should not have to do this, temp workaround for https://github.com/neo4j/neo4j/issues/2677
+            Relationship nextRel = root.getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.OUTGOING);
 
             while (count < limit && nextRel != null) {
                 Node changeNode = nextRel.getEndNode();
 
                 ChangeSet changeSet = new ChangeSet((long) changeNode.getProperty(SEQUENCE), (long) changeNode.getProperty(TIMESTAMP));
-                if (since != null && changeSet.getSequence() <= since) {
+                if (changeSet.getSequence() <= since) {
                     break;
                 }
                 changeSet.addChanges((String[]) changeNode.getProperty(CHANGES));
@@ -125,24 +135,5 @@ public class GraphChangeReader implements ChangeReader {
         }
 
         return changeFeed;
-    }
-
-    /**
-     * Get the root.
-     *
-     * @return root, will never be null.
-     */
-    private Node getRoot() {
-        if (root == null) {
-            try (Transaction tx = database.beginTx()) {
-                root = getSingleOrNull(at(database).getAllNodesWithLabel(Labels._GA_ChangeFeed));
-                if (root == null) {
-                    LOG.error("There is no ChangeFeed Root Node! Has the ChangeFeed Module been registered with the GraphAware Runtime? Has the Runtime been started?");
-                    throw new IllegalStateException("There is no ChangeFeed Root Node! Has the ChangeFeed Module been registered with the GraphAware Runtime? Has the Runtime been started?");
-                }
-                tx.success();
-            }
-        }
-        return root;
     }
 }
