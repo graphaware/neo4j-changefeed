@@ -16,11 +16,13 @@
 
 package com.graphaware.module.changefeed.api;
 
+import com.graphaware.module.changefeed.cache.CachingGraphChangeReader;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.io.ChangeReader;
-import com.graphaware.module.changefeed.io.GraphChangeReader;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -67,7 +69,7 @@ public class ChangeFeedApi {
     @RequestMapping(value = "/{moduleId}", method = RequestMethod.GET)
     @ResponseBody
     public Collection<ChangeSet> getChangeFeed(@PathVariable String moduleId, @RequestParam(value = "since", required = false) Integer since, @RequestParam(value = "limit", required = false) Integer limit) {
-        ChangeReader changeReader = new GraphChangeReader(database, moduleId);
+        ChangeReader changeReader = new CachingGraphChangeReader(database, moduleId);
 
         if (since == null && limit == null) {
             return changeReader.getAllChanges();
@@ -82,5 +84,16 @@ public class ChangeFeedApi {
         }
 
         return changeReader.getNumberOfChangesSince(since, limit);
+    }
+
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public void handleIllegalArguments() {
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public void handleNotFound() {
     }
 }

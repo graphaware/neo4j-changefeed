@@ -27,23 +27,36 @@ import java.util.concurrent.Executors;
 
 import static com.graphaware.test.util.TestUtils.executeCypher;
 import static com.graphaware.test.util.TestUtils.get;
+import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
 
-public class ChangeFeedModuleServerIntegrationTest extends NeoServerIntegrationTest {
+public class ChangeFeedMultiModuleServerIntegrationTest extends NeoServerIntegrationTest {
 
     /**
      * {@inheritDoc}
      */
     @Override
     protected String neo4jConfigFile() {
-        return "neo4j-changefeed.properties";
+        return "neo4j-multi-changefeed.properties";
     }
 
     @Test
     public void graphChangesShouldAppearInChangeFeed() {
         executeCypher(baseUrl(), "CREATE (p:Person {name: 'MB'})");
-        assertTrue(get(baseUrl() + "/graphaware/changefeed/CFM/", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
+        executeCypher(baseUrl(), "CREATE (p:Person {name: 'LM'})");
+        executeCypher(baseUrl(), "CREATE (p:Person {name: 'DM'})");
+        executeCypher(baseUrl(), "CREATE (p:Person {name: 'VB'})");
+
+        assertFalse(get(baseUrl() + "/graphaware/changefeed/changefeed1/", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
+        assertTrue(get(baseUrl() + "/graphaware/changefeed/changefeed1/", HttpStatus.SC_OK).contains("Created node (:Person {name: LM})"));
+        assertTrue(get(baseUrl() + "/graphaware/changefeed/changefeed2/", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
+        assertTrue(get(baseUrl() + "/graphaware/changefeed/changefeed2/", HttpStatus.SC_OK).contains("Created node (:Person {name: LM})"));
+    }
+
+    @Test
+    public void unknownModuleShouldReturn404() {
+        get(baseUrl() + "/graphaware/changefeed/CFM/", HttpStatus.SC_NOT_FOUND);
     }
 
     @Test

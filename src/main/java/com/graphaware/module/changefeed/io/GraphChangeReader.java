@@ -65,7 +65,7 @@ public class GraphChangeReader implements ChangeReader {
             root = getSingleOrNull(database.findNodesByLabelAndProperty(Labels._GA_ChangeFeed, MODULE_ID, moduleId));
             if (root == null) {
                 LOG.error("There is no ChangeFeed Root Node for module ID " + moduleId + "! Has the ChangeFeed Module been registered with the GraphAware Runtime? Has the Runtime been started?");
-                throw new IllegalStateException("There is no ChangeFeed Root Node for module ID " + moduleId + "! Has the ChangeFeed Module been registered with the GraphAware Runtime? Has the Runtime been started?");
+                throw new NotFoundException("There is no ChangeFeed Root Node for module ID " + moduleId + "! Has the ChangeFeed Module been registered with the GraphAware Runtime? Has the Runtime been started?");
             }
             tx.success();
         }
