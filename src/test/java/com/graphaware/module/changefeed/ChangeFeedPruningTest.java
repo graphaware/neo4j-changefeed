@@ -45,7 +45,7 @@ public class ChangeFeedPruningTest {
     public void setUp() {
         database = new TestGraphDatabaseFactory().newImpermanentDatabase();
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database);
-        module = new ChangeFeedModule("CFM", new ChangeFeedConfiguration(10), database);
+        module = new ChangeFeedModule("CFM", ChangeFeedConfiguration.defaultConfiguration().withMaxChanges(10), database);
         runtime.registerModule(module);
         runtime.start();
 

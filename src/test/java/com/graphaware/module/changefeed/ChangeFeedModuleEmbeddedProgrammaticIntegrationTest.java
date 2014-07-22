@@ -49,7 +49,7 @@ public class ChangeFeedModuleEmbeddedProgrammaticIntegrationTest extends Databas
 
     private void registerSingleModuleAndCreateReader() {
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase());
-        runtime.registerModule(new ChangeFeedModule("CFM", new ChangeFeedConfiguration(3), getDatabase()));
+        runtime.registerModule(new ChangeFeedModule("CFM", ChangeFeedConfiguration.defaultConfiguration().withMaxChanges(3), getDatabase()));
         runtime.start();
 
         changeReader = new CachingGraphChangeReader(getDatabase());

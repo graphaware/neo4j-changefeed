@@ -59,39 +59,6 @@ public class ChangeSetCache {
     }
 
     /**
-     * Get all latest changes.
-     *
-     * @return latest changes. The maximum number of changes returned is limited by the capacity of the cache and the
-     *         number of changes currently in cache, whichever is lower.
-     */
-    public Collection<ChangeSet> getChanges() {
-        return getChanges(changes.getMaxCapacity());
-    }
-
-    /**
-     * Get a number of latest changes.
-     *
-     * @param limit the number of changes to get.
-     * @return changes ordered from newest to oldest. The maximum number of changes returned is limited by the capacity
-     *         of the cache, the number of changes currently in cache, and the provided limit, whichever is lower.
-     */
-    public Collection<ChangeSet> getChanges(int limit) {
-        return getChanges(-1, limit);
-    }
-
-    /**
-     * Get all latest changes newer than the given sequence number.
-     *
-     * @param sequence sequence number of all returned changes will be greater than this number.
-     * @return changes ordered from newest to oldest. The maximum number of changes returned is limited by the capacity
-     *         of the cache, the number of changes currently in cache, and the provided sequence,
-     *         whichever returns fewer changes.
-     */
-    public Collection<ChangeSet> getChangesSince(long sequence) {
-        return getChanges(sequence, changes.getMaxCapacity());
-    }
-
-    /**
      * Get a number of latest changes newer than the given sequence number.
      *
      * @param sequence sequence number of all returned changes will be greater than this number.

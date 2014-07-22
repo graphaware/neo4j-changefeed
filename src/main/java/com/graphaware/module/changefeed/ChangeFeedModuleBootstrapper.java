@@ -38,12 +38,12 @@ public class ChangeFeedModuleBootstrapper implements RuntimeModuleBootstrapper {
      */
     @Override
     public RuntimeModule bootstrapModule(String moduleId, Map<String, String> config, GraphDatabaseService database) {
-        ChangeFeedConfiguration configuration = new ChangeFeedConfiguration();
+        ChangeFeedConfiguration configuration = ChangeFeedConfiguration.defaultConfiguration();
 
         if (config.get(MAX_CHANGES) != null) {
             int maxChanges = Integer.parseInt(config.get(MAX_CHANGES));
             LOG.info("MaxChanges set to {}", maxChanges);
-            configuration = new ChangeFeedConfiguration(maxChanges);
+            configuration = configuration.withMaxChanges(maxChanges);
         }
 
         return new ChangeFeedModule(moduleId, configuration, database);

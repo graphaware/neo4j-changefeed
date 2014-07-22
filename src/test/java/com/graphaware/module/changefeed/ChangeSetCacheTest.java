@@ -47,8 +47,8 @@ public class ChangeSetCacheTest {
         queue.push(c3);
         queue.push(c4);
 
-        assertEquals(3, queue.getChanges().size());
-        Iterator<ChangeSet> it = queue.getChanges().iterator();
+        assertEquals(3, queue.getChanges(-1, Integer.MAX_VALUE).size());
+        Iterator<ChangeSet> it = queue.getChanges(-1, Integer.MAX_VALUE).iterator();
         assertEquals(4, it.next().getSequence());
         assertEquals(3, it.next().getSequence());
         assertEquals(2, it.next().getSequence());
@@ -69,10 +69,10 @@ public class ChangeSetCacheTest {
         queue.push(c3);
         queue.push(c4);
 
-        assertEquals(3, queue.getChanges().size());
-        Collection<ChangeSet> changes = queue.getChanges(2);
+        assertEquals(3, queue.getChanges(-1, Integer.MAX_VALUE).size());
+        Collection<ChangeSet> changes = queue.getChanges(-1, 2);
         assertEquals(2, changes.size());
-        Iterator<ChangeSet> it = queue.getChanges().iterator();
+        Iterator<ChangeSet> it = queue.getChanges(-1, Integer.MAX_VALUE).iterator();
         assertEquals(4, it.next().getSequence());
         assertEquals(3, it.next().getSequence());
     }
@@ -94,7 +94,7 @@ public class ChangeSetCacheTest {
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
-                    if (10 < queue.getChanges().size()) {
+                    if (10 < queue.getChanges(-1, Integer.MAX_VALUE).size()) {
                         failure.set(true);
                     }
                 }
@@ -103,7 +103,7 @@ public class ChangeSetCacheTest {
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
 
-        assertEquals(10, queue.getChanges().size());
+        assertEquals(10, queue.getChanges(-1, Integer.MAX_VALUE).size());
 //        assertFalse(failure.get()); //this fails, but we don't care, eventually it's 10
     }
 }

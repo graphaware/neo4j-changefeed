@@ -35,7 +35,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerDrivenModule<EmptyContext> {
 
     public static final String DEFAULT_MODULE_ID = "CFM";
-    private static final int PRUNE_DELAY = 10000;
 
     private static final ChangeSetCacheRepository CACHE_REPOSITORY = new ChangeSetCacheRepository();
 
@@ -86,7 +85,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
      */
     @Override
     public EmptyContext createInitialContext(GraphDatabaseService database) {
-        return new EmptyContext(System.currentTimeMillis() + PRUNE_DELAY);
+        return new EmptyContext(System.currentTimeMillis() + configuration.getPruneDelay());
     }
 
     /**
@@ -95,6 +94,6 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     @Override
     public EmptyContext doSomeWork(EmptyContext lastContext, GraphDatabaseService database) {
         changeWriter.pruneChanges(configuration.getMaxChanges());
-        return new EmptyContext(System.currentTimeMillis() + PRUNE_DELAY);
+        return new EmptyContext(System.currentTimeMillis() + configuration.getPruneDelay());
     }
 }

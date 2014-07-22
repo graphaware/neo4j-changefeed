@@ -75,13 +75,4 @@ public class BoundedConcurrentStack<E> implements Iterable<E> {
     public Iterator<E> iterator() {
         return elements.iterator();
     }
-
-    /**
-     * Get the maximum capacity of the stack.
-     *
-     * @return max capacity.
-     */
-    public int getMaxCapacity() {
-        return maxCapacity;
-    }
 }
