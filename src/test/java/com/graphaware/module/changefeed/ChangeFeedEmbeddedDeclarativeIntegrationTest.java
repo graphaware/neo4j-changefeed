@@ -31,7 +31,7 @@ import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
 
-public class ChangeFeedModuleEmbeddedDeclarativeIntegrationTest extends DatabaseIntegrationTest {
+public class ChangeFeedEmbeddedDeclarativeIntegrationTest extends DatabaseIntegrationTest {
 
     private ChangeReader changeReader;
 

@@ -93,7 +93,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
      */
     @Override
     public EmptyContext doSomeWork(EmptyContext lastContext, GraphDatabaseService database) {
-        changeWriter.pruneChanges(configuration.getMaxChanges());
+        changeWriter.pruneChanges(configuration.getMaxChanges(), configuration.getPruneWhenMaxExceededBy());
         return new EmptyContext(System.currentTimeMillis() + configuration.getPruneDelay());
     }
 }

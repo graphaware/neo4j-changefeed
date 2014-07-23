@@ -14,9 +14,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-package com.graphaware.module.changefeed;
+package com.graphaware.module.changefeed.cache;
 
-import com.graphaware.module.changefeed.cache.ChangeSetCache;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import org.junit.Test;
 

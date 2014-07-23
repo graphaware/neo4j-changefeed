@@ -41,8 +41,6 @@ public class GraphChangeWriter implements ChangeWriter {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphChangeWriter.class);
 
-    private static final int PRUNE_WHEN_MAX_EXCEEDED_BY = 10;
-
     private final GraphDatabaseService database;
     private final String moduleId;
 
@@ -114,7 +112,7 @@ public class GraphChangeWriter implements ChangeWriter {
      * {@inheritDoc}
      */
     @Override
-    public void pruneChanges(int keep) {
+    public void pruneChanges(int keep, int mustBeExceededBy) {
         try (Transaction tx = database.beginTx()) {
             Relationship oldestChangeRel = getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING);
             if (oldestChangeRel != null) {
@@ -125,7 +123,7 @@ public class GraphChangeWriter implements ChangeWriter {
                     long lowSequence = (long) oldestNode.getProperty(SEQUENCE);
                     long nodesToDelete = ((highSequence - lowSequence) + 1) - keep;
                     Node newOldestNode = null;
-                    if (nodesToDelete >= PRUNE_WHEN_MAX_EXCEEDED_BY) {
+                    if (nodesToDelete >= mustBeExceededBy) {
                         LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
                         getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING).delete();
                         while (nodesToDelete > 0) {

@@ -31,7 +31,10 @@ public class ChangeFeedModuleBootstrapper implements RuntimeModuleBootstrapper {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChangeFeedModuleBootstrapper.class);
 
-    private static final String MAX_CHANGES = "maxChanges"; //key to use when configuring using neo4j.properties
+    //keys to use when configuring using neo4j.properties
+    private static final String MAX_CHANGES = "maxChanges";
+    private static final String PRUNE_DELAY = "pruneDelay";
+    private static final String PRUNE_WHEN_EXCEEDED = "pruneWhenExceeded";
 
     /**
      * {@inheritDoc}
@@ -44,6 +47,18 @@ public class ChangeFeedModuleBootstrapper implements RuntimeModuleBootstrapper {
             int maxChanges = Integer.parseInt(config.get(MAX_CHANGES));
             LOG.info("MaxChanges set to {}", maxChanges);
             configuration = configuration.withMaxChanges(maxChanges);
+        }
+
+        if (config.get(PRUNE_DELAY) != null) {
+            int pruneDelay = Integer.parseInt(config.get(PRUNE_DELAY));
+            LOG.info("PruneDelay set to {}", pruneDelay);
+            configuration = configuration.withPruneDelay(pruneDelay);
+        }
+
+        if (config.get(PRUNE_WHEN_EXCEEDED) != null) {
+            int pruneWhenExceeded = Integer.parseInt(config.get(PRUNE_WHEN_EXCEEDED));
+            LOG.info("PruneWhenExceeded set to {}", pruneWhenExceeded);
+            configuration = configuration.withPruneWhenMaxExceededBy(pruneWhenExceeded);
         }
 
         return new ChangeFeedModule(moduleId, configuration, database);

@@ -22,7 +22,9 @@ public interface ChangeWriter {
     /**
      * Prune the changes, only keeping the specified number of latest changes.
      *
-     * @param keep number of changes to keep.
+     * @param keep             number of changes to keep.
+     * @param mustBeExceededBy number of changes in the database by which the <code>keep</code> parameter
+     *                         must be exceeded before the oldest changes are actually pruned.
      */
-    void pruneChanges(int keep);
+    void pruneChanges(int keep, int mustBeExceededBy);
 }
