@@ -96,4 +96,13 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         changeWriter.pruneChanges(configuration.getMaxChanges(), configuration.getPruneWhenMaxExceededBy());
         return new EmptyContext(System.currentTimeMillis() + configuration.getPruneDelay());
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void shutdown() {
+        super.shutdown();
+        CACHE_REPOSITORY.clear();
+    }
 }

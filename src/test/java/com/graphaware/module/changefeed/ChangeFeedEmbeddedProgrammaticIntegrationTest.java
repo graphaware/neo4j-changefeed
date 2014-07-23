@@ -16,6 +16,7 @@
 
 package com.graphaware.module.changefeed;
 
+import com.graphaware.common.strategy.NodeInclusionStrategy;
 import com.graphaware.module.changefeed.cache.CachingGraphChangeReader;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.domain.Labels;
@@ -30,13 +31,14 @@ import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
 
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
-import static com.graphaware.module.changefeed.domain.Properties.SEQUENCE;
+import static com.graphaware.module.changefeed.domain.Properties.*;
 import static org.junit.Assert.*;
 import static org.neo4j.graphdb.DynamicRelationshipType.withName;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
@@ -48,7 +50,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
     @Test
     public void feedShouldBeEmptyOnANewDatabase() {
-        registerSingleModuleAndCreateReader();
+        registerSingleModuleAndStart();
 
         assertEquals(0, new GraphChangeReader(getDatabase()).getAllChanges().size());
         assertEquals(0, new GraphChangeReader(getDatabase(), "CFM").getAllChanges().size());
@@ -58,7 +60,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
     @Test
     public void changeRootShouldHavePointerToOldestChange() {
-        registerSingleModuleAndCreateReader();
+        registerSingleModuleAndStart();
 
         performModifications();
 
@@ -74,7 +76,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
     @Test
     public void graphChangesShouldAppearInTheChangeFeed() throws InterruptedException {
-        registerSingleModuleAndCreateReader();
+        registerSingleModuleAndStart();
 
         performModifications();
 
@@ -192,7 +194,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
     @Test
     public void transactionsNotCommittedShouldNotReflectInTheChangeFeed() {
-        registerSingleModuleAndCreateReader();
+        registerSingleModuleAndStart();
 
         performChangesWithException();
 
@@ -220,7 +222,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
     @Test
     public void transactionsNotCommittedShouldNotReflectInCachedChangeFeed() {
-        registerSingleModuleAndCreateReader();
+        registerSingleModuleAndStart();
 
         performChangesWithException();
 
@@ -291,7 +293,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
     @Test
     public void sequenceNumbersShouldBeOrdered() throws InterruptedException {
-        registerSingleModuleAndCreateReader();
+        registerSingleModuleAndStart();
 
         //slow down the first tx:
         getDatabase().registerTransactionEventHandler(new TransactionEventHandler.Adapter<Void>() {
@@ -351,15 +353,87 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
     @Test
     public void shouldBeAbleToRegisterMultipleModules() {
+        registerMultipleModulesAndStart();
 
+        try (Transaction tx = getDatabase().beginTx()) {
+            getDatabase().createNode(DynamicLabel.label("Person"));
+            tx.success();
+        }
+
+        try (Transaction tx = getDatabase().beginTx()) {
+            getDatabase().createNode(DynamicLabel.label("Company"));
+            tx.success();
+        }
+
+        assertEquals(1, new CachingGraphChangeReader(getDatabase(), "CFM1").getAllChanges().size());
+        assertEquals(1, new GraphChangeReader(getDatabase(), "CFM1").getAllChanges().size());
+
+        assertEquals(2, new CachingGraphChangeReader(getDatabase(), "CFM2").getAllChanges().size());
+        assertEquals(2, new GraphChangeReader(getDatabase(), "CFM2").getAllChanges().size());
+    }
+
+    @Test(expected = NotFoundException.class)
+    public void readingCountsForUnregisteredModuleShouldThrowException() {
+        registerMultipleModulesAndStart();
+
+        new CachingGraphChangeReader(getDatabase()).getAllChanges();
+    }
+
+    @Test(expected = NotFoundException.class)
+    public void readingCountsForUnregisteredModuleShouldThrowException2() {
+        registerMultipleModulesAndStart();
+
+        new GraphChangeReader(getDatabase()).getAllChanges();
+    }
+
+    @Test(expected = NotFoundException.class)
+    public void readingCountsWhenRuntimeHasNotBeenStartedShouldThrowException() {
+        new GraphChangeReader(getDatabase()).getAllChanges();
+    }
+
+    @Test(expected = NotFoundException.class)
+    public void readingCountsWhenRuntimeHasNotBeenStartedShouldThrowException2() {
+        new CachingGraphChangeReader(getDatabase()).getAllChanges();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void readingCountsWhenRuntimeHasNotBeenStartedShouldThrowException3() throws Exception {
+        //previously, a root has been created:
+        try (Transaction tx = getDatabase().beginTx()) {
+            Node root = getDatabase().createNode(Labels._GA_ChangeFeed);
+            root.setProperty(MODULE_ID, "CFM");
+            tx.success();
+        }
+
+        new CachingGraphChangeReader(getDatabase()).getAllChanges();
     }
 
     @Test
-    public void whenTransactionFailsChangesToNotAppear() {
+    public void sequenceShouldStartWhereItLeftOff() {
+        //previously, a root has been created:
+        try (Transaction tx = getDatabase().beginTx()) {
+            Node root = getDatabase().createNode(Labels._GA_ChangeFeed);
+            root.setProperty(MODULE_ID, "CFM");
+            Node change = getDatabase().createNode(Labels._GA_ChangeSet);
+            change.setProperty(SEQUENCE, 100L);
+            change.setProperty(TIMESTAMP, new Date().getTime());
+            change.setProperty(CHANGES, new String[]{"dummy"});
+            root.createRelationshipTo(change, Relationships._GA_CHANGEFEED_NEXT_CHANGE);
+            tx.success();
+        }
 
+        registerSingleModuleAndStart();
+
+        try (Transaction tx = getDatabase().beginTx()) {
+            getDatabase().createNode();
+            tx.success();
+        }
+
+        assertEquals(101, new CachingGraphChangeReader(getDatabase()).getAllChanges().iterator().next().getSequence());
+        assertEquals(101, new GraphChangeReader(getDatabase()).getAllChanges().iterator().next().getSequence());
     }
 
-    private void registerSingleModuleAndCreateReader() {
+    private void registerSingleModuleAndStart() {
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase());
 
         ChangeFeedConfiguration configuration = ChangeFeedConfiguration
@@ -369,6 +443,26 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
                 .withPruneWhenMaxExceededBy(1);
 
         runtime.registerModule(new ChangeFeedModule("CFM", configuration, getDatabase()));
+
+        runtime.start();
+    }
+
+    private void registerMultipleModulesAndStart() {
+        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase());
+
+        ChangeFeedConfiguration configuration1 = ChangeFeedConfiguration
+                .defaultConfiguration()
+                .with(new NodeInclusionStrategy() {
+                    @Override
+                    public boolean include(Node node) {
+                        return node.hasLabel(DynamicLabel.label("Person"));
+                    }
+                });
+
+        ChangeFeedConfiguration configuration2 = ChangeFeedConfiguration.defaultConfiguration();
+
+        runtime.registerModule(new ChangeFeedModule("CFM1", configuration1, getDatabase()));
+        runtime.registerModule(new ChangeFeedModule("CFM2", configuration2, getDatabase()));
 
         runtime.start();
     }

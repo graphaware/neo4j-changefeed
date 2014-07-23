@@ -123,6 +123,8 @@ public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<Cha
         ChangeFeedConfiguration that = (ChangeFeedConfiguration) o;
 
         if (maxChanges != that.maxChanges) return false;
+        if (pruneDelay != that.pruneDelay) return false;
+        if (pruneWhenMaxExceededBy != that.pruneWhenMaxExceededBy) return false;
 
         return true;
     }
@@ -134,6 +136,8 @@ public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<Cha
     public int hashCode() {
         int result = super.hashCode();
         result = 31 * result + maxChanges;
+        result = 31 * result + pruneDelay;
+        result = 31 * result + pruneWhenMaxExceededBy;
         return result;
     }
 }

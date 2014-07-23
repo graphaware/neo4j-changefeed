@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
 import static com.graphaware.module.changefeed.domain.Labels._GA_ChangeSet;
@@ -44,7 +44,7 @@ public class GraphChangeWriter implements ChangeWriter {
     private final GraphDatabaseService database;
     private final String moduleId;
 
-    private AtomicInteger sequence = null;
+    private AtomicLong sequence = null;
     private Node root;
 
     /**
@@ -181,16 +181,16 @@ public class GraphChangeWriter implements ChangeWriter {
      * thus in a single thread.
      */
     private void initializeSequence() {
-        int startSequence = 0;
+        long startSequence = 0L;
 
         try (Transaction tx = database.beginTx()) {
             Relationship nextRel = getRoot().getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
             if (nextRel != null) {
-                startSequence = (Integer) nextRel.getEndNode().getProperty(SEQUENCE);
+                startSequence = (long) nextRel.getEndNode().getProperty(SEQUENCE, 0L);
             }
             tx.success();
         }
 
-        sequence = new AtomicInteger(startSequence);
+        sequence = new AtomicLong(startSequence);
     }
 }

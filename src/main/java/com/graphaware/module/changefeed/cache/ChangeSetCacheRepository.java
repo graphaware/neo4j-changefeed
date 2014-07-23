@@ -51,4 +51,11 @@ public class ChangeSetCacheRepository {
 
         return caches.get(moduleId);
     }
+
+    /**
+     * Clear all caches.
+     */
+    public void clear() {
+        caches.clear();
+    }
 }
