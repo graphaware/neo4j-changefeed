@@ -153,6 +153,18 @@ Collection<ChangeSet> changes = reader.getAllChanges();
 
 Please refer to Javadoc for more detail.
 
+Limitations
+-----------
+
+Note that Node IDs and Relationship IDs are not exposed by the change feed. This is a deliberate choice as it is not a
+good practice to expose internal IDs outside of Neo4j. Please use custom identifiers (such as UUIDs) instead.
+
+Also note that the contents of the changes are human-, rather than machine-readable. This will be changed in future
+versions.
+
+Both functionality and performance of ChangeFeed have been extensively tested on single-machine deployments. No problems
+are expected in clustered scenarios, but actual tests for these are in progress.
+
 License
 -------
 
