@@ -6,7 +6,7 @@ import com.graphaware.module.changefeed.io.GraphChangeWriter;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 /**
- * {@link com.graphaware.module.changefeed.io.GraphChangeWriter} that also pushes all written changes to {@link ChangeSetCache}.
+ * {@link GraphChangeWriter} that also pushes all written changes to {@link ChangeSetCache}.
  */
 public class CachingGraphChangeWriter extends GraphChangeWriter {
 
