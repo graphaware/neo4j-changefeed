@@ -124,7 +124,7 @@ public class GraphChangeWriter implements ChangeWriter {
                     long nodesToDelete = ((highSequence - lowSequence) + 1) - keep;
                     Node newOldestNode = null;
                     if (nodesToDelete >= mustBeExceededBy) {
-                        LOG.info("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
+                        LOG.debug("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
                         getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING).delete();
                         while (nodesToDelete > 0) {
                             Relationship rel = oldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
@@ -135,7 +135,7 @@ public class GraphChangeWriter implements ChangeWriter {
                             nodesToDelete--;
                         }
                         getRoot().createRelationshipTo(newOldestNode, _GA_CHANGEFEED_OLDEST_CHANGE);
-                        LOG.info("ChangeFeed pruning complete");
+                        LOG.debug("ChangeFeed pruning complete");
                     }
                 }
             }

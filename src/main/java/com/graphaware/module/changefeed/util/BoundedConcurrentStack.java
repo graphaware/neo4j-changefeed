@@ -64,6 +64,10 @@ public class BoundedConcurrentStack<E> implements Iterable<E> {
      */
     public void populate(Collection<E> elements) {
         this.elements.addAll(elements);
+
+        while (this.elements.size() > maxCapacity) {
+            this.elements.removeLast();
+        }
     }
 
     /**

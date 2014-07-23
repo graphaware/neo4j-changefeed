@@ -19,6 +19,7 @@ package com.graphaware.module.changefeed.cache;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
@@ -75,6 +76,26 @@ public class ChangeSetCacheTest {
         assertEquals(4, it.next().getSequence());
         assertEquals(3, it.next().getSequence());
     }
+
+    @Test
+    public void latestChangesShouldBeKeptWhenInitializedOverLimit() {
+        ChangeSetCache queue = new ChangeSetCache(3);
+
+        ChangeSet c1 = new ChangeSet(1);
+        ChangeSet c2 = new ChangeSet(2);
+        ChangeSet c3 = new ChangeSet(3);
+        ChangeSet c4 = new ChangeSet(4);
+
+        queue.populate(Arrays.asList(c4, c3, c2, c1));
+
+        assertEquals(3, queue.getChanges(-1, Integer.MAX_VALUE).size());
+        Collection<ChangeSet> changes = queue.getChanges(-1, 2);
+        assertEquals(2, changes.size());
+        Iterator<ChangeSet> it = queue.getChanges(-1, Integer.MAX_VALUE).iterator();
+        assertEquals(4, it.next().getSequence());
+        assertEquals(3, it.next().getSequence());
+    }
+
 
     @Test
     public void survivesHeavyConcurrency() throws InterruptedException {
