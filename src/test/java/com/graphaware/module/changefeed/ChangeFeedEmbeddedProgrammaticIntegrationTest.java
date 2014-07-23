@@ -343,7 +343,8 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         assertEquals(1, it.next().getSequence());
 
         //caching
-        changes = new CachingGraphChangeReader(getDatabase()).getAllChanges();
+        GraphChangeReader reader = new CachingGraphChangeReader(getDatabase());
+        changes = reader.getAllChanges();
         assertEquals(2, changes.size());
         it = changes.iterator();
 
