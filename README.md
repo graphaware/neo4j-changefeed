@@ -1,6 +1,8 @@
 GraphAware Neo4j ChangeFeed
 ===========================
 
+[![Build Status](https://travis-ci.org/graphaware/neo4j-changefeed.png)](https://travis-ci.org/graphaware/neo4j-changefeed) | <a href="http://graphaware.com/downloads/" target="_blank">Downloads</a> | <a href="http://graphaware.com/site/changefeed/latest/apidocs/" target="_blank">Javadoc</a> | Latest Release: 2.1.3.10.1
+
 GraphAware ChangeFeed is a [GraphAware](https://github.com/graphaware/neo4j-framework) Runtime Module that keeps track of changes made to the graph.
 
 Getting the Software
@@ -28,7 +30,7 @@ Releases are synced to <a href="http://search.maven.org/#search%7Cga%7C1%7Ca%3A%
         <dependency>
             <groupId>com.graphaware.neo4j</groupId>
             <artifactId>changefeed</artifactId>
-            <version>2.1.2.10.1</version>
+            <version>2.1.3.10.1</version>
         </dependency>
         ...
     </dependencies>
@@ -36,7 +38,7 @@ Releases are synced to <a href="http://search.maven.org/#search%7Cga%7C1%7Ca%3A%
 #### Snapshots
 
 To use the latest development version, just clone this repository, run `mvn clean install` and change the version in the
-dependency above to 2.1.2.10.2-SNAPSHOT.
+dependency above to 2.1.3.10.2-SNAPSHOT.
 
 #### Note on Versioning Scheme
 
