@@ -22,6 +22,12 @@
     <artifactId>changefeed</artifactId>
     <version>2.1.3.10.1-SNAPSHOT</version>
 
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
+
     <name>GraphAware ChangeFeed Module</name>
     <description>GraphAware ChangeFeed Module to provide a stream of changes on the graph</description>
 
@@ -94,6 +100,7 @@
             <version>${graphware.version}</version>
             <scope>provided</scope>
         </dependency>
+
         <!-- Spring Framework -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -177,7 +184,7 @@
                 <version>2.9</version>
                 <configuration>
                     <links>
-                        <link>http://api.neo4j.org/2.1.2/</link>
+                        <link>http://api.neo4j.org/2.1.3/</link>
                     </links>
                 </configuration>
                 <executions>
