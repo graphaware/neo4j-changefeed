@@ -325,6 +325,8 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
             }
         });
 
+        Thread.sleep(10);
+
         executor.submit(new Runnable() {
             @Override
             public void run() {
