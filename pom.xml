@@ -11,7 +11,7 @@
   ~  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   ~ See the GNU General Public License for more details. You should have received a copy of
   ~ the GNU General Public License along with this program.  If not, see
-  ~ <http://www.gnu.org/licenses/>.
+  ~ <http://www.gnu.org/licenses />.
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -38,6 +38,42 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+
+    <scm>
+        <connection>scm:git:git@github.com:graphaware/neo4j-changefeed.git</connection>
+        <developerConnection>scm:git:git@github.com:graphaware/neo4j-changefeed.git</developerConnection>
+        <url>git@github.com:graphaware/neo4j-changefeed.git</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>bachmanm</id>
+            <name>Michal Bachman</name>
+            <email>neo4j-changefeed@graphaware.com</email>
+        </developer>
+        <developer>
+            <id>luannem</id>
+            <name>Luanne Misquitta</name>
+            <email>luanne@graphaware.com</email>
+        </developer>
+    </developers>
+
+    <ciManagement>
+        <url>https://travis-ci.org/graphaware/neo4j-changefeed</url>
+        <system>Travis CI</system>
+    </ciManagement>
+
+    <inceptionYear>2014</inceptionYear>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/graphaware/neo4j-changefeed/issues</url>
+    </issueManagement>
+
+    <organization>
+        <name>Graph Aware Limited</name>
+        <url>http://graphaware.com</url>
+    </organization>
 
     <properties>
         <java.version>1.7</java.version>
