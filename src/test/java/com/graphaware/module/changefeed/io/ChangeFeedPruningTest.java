@@ -21,7 +21,11 @@ import com.graphaware.module.changefeed.ChangeFeedModule;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
+import com.graphaware.runtime.config.FluentRuntimeConfiguration;
+import com.graphaware.runtime.config.RuntimeConfiguration;
 import com.graphaware.runtime.metadata.EmptyContext;
+import com.graphaware.runtime.schedule.FixedDelayTimingStrategy;
+import com.graphaware.runtime.schedule.TimingStrategy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,7 +48,17 @@ public class ChangeFeedPruningTest {
     @Before
     public void setUp() {
         database = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database);
+
+        TimingStrategy timingStrategy = FixedDelayTimingStrategy
+                .getInstance()
+                .withInitialDelay(100)
+                .withDelay(100);
+
+        RuntimeConfiguration runtimeConfiguration = FluentRuntimeConfiguration
+                .defaultConfiguration()
+                .withTimingStrategy(timingStrategy);
+
+        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database, runtimeConfiguration);
         module = new ChangeFeedModule("CFM", ChangeFeedConfiguration.defaultConfiguration().withMaxChanges(10).withPruneDelay(500), database);
         runtime.registerModule(module);
         runtime.start();
@@ -99,7 +113,7 @@ public class ChangeFeedPruningTest {
         //Feed should not be pruned because it has not exceeded the maxChanges by 10
         Collection<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(10, changes.size());
-        Thread.sleep(500);  //Wait for pruning to kick in
+        Thread.sleep(300);  //Wait for pruning to kick in
         assertEquals(10, changes.size());
 
         //Add 10 more changes
@@ -110,7 +124,7 @@ public class ChangeFeedPruningTest {
                 tx.success();
             }
         }
-        Thread.sleep(500);  //Wait for pruning to kick in
+        Thread.sleep(300);  //Wait for pruning to kick in
         changes = changeReader.getAllChanges();
         assertEquals(10, changes.size());
     }

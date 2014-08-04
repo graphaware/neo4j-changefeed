@@ -5,6 +5,10 @@ import com.graphaware.module.changefeed.ChangeFeedModule;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
+import com.graphaware.runtime.config.FluentRuntimeConfiguration;
+import com.graphaware.runtime.config.RuntimeConfiguration;
+import com.graphaware.runtime.schedule.FixedDelayTimingStrategy;
+import com.graphaware.runtime.schedule.TimingStrategy;
 import com.graphaware.test.integration.DatabaseIntegrationTest;
 import org.apache.commons.lang.ArrayUtils;
 import org.junit.Test;
@@ -32,12 +36,21 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
     public void setUp() throws Exception {
         super.setUp();
 
-        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase());
+        TimingStrategy timingStrategy = FixedDelayTimingStrategy
+                .getInstance()
+                .withInitialDelay(100)
+                .withDelay(100);
+
+        RuntimeConfiguration runtimeConfiguration = FluentRuntimeConfiguration
+                .defaultConfiguration()
+                .withTimingStrategy(timingStrategy);
+
+        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase(), runtimeConfiguration);
         runtime.registerModule(new ChangeFeedModule("CFM",
                 ChangeFeedConfiguration
                         .defaultConfiguration()
                         .withMaxChanges(3)
-                        .withPruneDelay(500),
+                        .withPruneDelay(200),
                 getDatabase()));
 
         runtime.start();
@@ -110,7 +123,7 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
             tx.success();
         }
 
-        Thread.sleep(1000);
+        Thread.sleep(300);
 
         try (Transaction tx = getDatabase().beginTx()) {
             assertEquals(3, count(at(getDatabase()).getAllNodesWithLabel(_GA_ChangeSet)));

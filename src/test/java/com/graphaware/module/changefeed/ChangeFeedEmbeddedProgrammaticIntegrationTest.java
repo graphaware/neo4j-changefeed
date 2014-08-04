@@ -24,6 +24,10 @@ import com.graphaware.module.changefeed.domain.Relationships;
 import com.graphaware.module.changefeed.io.GraphChangeReader;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
+import com.graphaware.runtime.config.FluentRuntimeConfiguration;
+import com.graphaware.runtime.config.RuntimeConfiguration;
+import com.graphaware.runtime.schedule.FixedDelayTimingStrategy;
+import com.graphaware.runtime.schedule.TimingStrategy;
 import com.graphaware.test.integration.DatabaseIntegrationTest;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
@@ -80,7 +84,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
         performModifications();
 
-        Thread.sleep(1000); //wait for pruning
+        Thread.sleep(1200); //wait for pruning
 
         verifyChanges(3, new GraphChangeReader(getDatabase()).getAllChanges());
         verifyChanges(3, new GraphChangeReader(getDatabase(), "CFM").getAllChanges());
@@ -435,7 +439,15 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
     }
 
     private void registerSingleModuleAndStart() {
-        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase());
+        TimingStrategy timingStrategy = FixedDelayTimingStrategy
+                .getInstance()
+                .withDelay(100);
+
+        RuntimeConfiguration runtimeConfig = FluentRuntimeConfiguration
+                .defaultConfiguration()
+                .withTimingStrategy(timingStrategy);
+
+        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase(), runtimeConfig);
 
         ChangeFeedConfiguration configuration = ChangeFeedConfiguration
                 .defaultConfiguration()
