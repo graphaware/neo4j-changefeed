@@ -17,7 +17,9 @@
 package com.graphaware.module.changefeed.cache;
 
 import com.graphaware.module.changefeed.domain.ChangeSet;
+import org.junit.Rule;
 import org.junit.Test;
+import org.neo4j.test.RepeatRule;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,6 +34,9 @@ import static junit.framework.Assert.assertEquals;
 
 
 public class ChangeSetCacheTest {
+
+    @Rule
+    public RepeatRule repeatRule = new RepeatRule();
 
     @Test
     public void capacityShouldNotBeExceeded() {
@@ -98,6 +103,7 @@ public class ChangeSetCacheTest {
 
 
     @Test
+    @RepeatRule.Repeat(times = 100)
     public void survivesHeavyConcurrency() throws InterruptedException {
         final ChangeSetCache queue = new ChangeSetCache(10);
         final AtomicLong sequence = new AtomicLong(0);
@@ -122,6 +128,8 @@ public class ChangeSetCacheTest {
         }
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
+
+        queue.push(new ChangeSet(sequence.incrementAndGet()));
 
         assertEquals(10, queue.getChanges(-1, Integer.MAX_VALUE).size());
 //        assertFalse(failure.get()); //this fails, but we don't care, eventually it's 10
