@@ -73,9 +73,15 @@ public class GraphChangeWriter implements ChangeWriter {
      */
     @Override
     public void recordChanges(Set<String> changes) {
-        ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet());
-        changeSet.addChanges(changes);
-        recordChanges(changeSet);
+        try (Transaction tx = database.beginTx()) {
+            tx.acquireWriteLock(getRoot());
+
+            ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet());
+            changeSet.addChanges(changes);
+            recordChanges(changeSet);
+
+            tx.success();
+        }
     }
 
     /**

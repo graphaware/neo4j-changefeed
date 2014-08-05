@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
+import org.neo4j.helpers.collection.Iterables;
 
 import java.util.Collection;
 import java.util.Date;
@@ -40,6 +41,7 @@ import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
 import static com.graphaware.module.changefeed.domain.Properties.*;
@@ -301,12 +303,15 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
         //slow down the first tx:
         getDatabase().registerTransactionEventHandler(new TransactionEventHandler.Adapter<Void>() {
-            protected volatile boolean hasRun = false;
+            protected AtomicBoolean hasRun = new AtomicBoolean(false);
 
             @Override
             public Void beforeCommit(TransactionData data) throws Exception {
-                if (!hasRun) {
-                    hasRun = true;
+                if (Iterables.count(data.createdNodes()) < 1) {
+                    return null;
+                }
+
+                if (hasRun.compareAndSet(false, true)) {
                     Thread.sleep(100);
                 }
                 return null;
@@ -324,8 +329,6 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
                 }
             }
         });
-
-        Thread.sleep(10);
 
         executor.submit(new Runnable() {
             @Override
