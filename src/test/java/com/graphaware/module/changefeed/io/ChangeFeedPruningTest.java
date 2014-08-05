@@ -59,7 +59,7 @@ public class ChangeFeedPruningTest {
                 .withTimingStrategy(timingStrategy);
 
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database, runtimeConfiguration);
-        module = new ChangeFeedModule("CFM", ChangeFeedConfiguration.defaultConfiguration().withMaxChanges(10).withPruneDelay(500), database);
+        module = new ChangeFeedModule("CFM", ChangeFeedConfiguration.defaultConfiguration().withMaxChanges(10).withPruneDelay(100), database);
         runtime.registerModule(module);
         runtime.start();
 
@@ -113,7 +113,7 @@ public class ChangeFeedPruningTest {
         //Feed should not be pruned because it has not exceeded the maxChanges by 10
         Collection<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(10, changes.size());
-        Thread.sleep(300);  //Wait for pruning to kick in
+        Thread.sleep(200);  //Wait for pruning to kick in
         assertEquals(10, changes.size());
 
         //Add 10 more changes
@@ -124,7 +124,7 @@ public class ChangeFeedPruningTest {
                 tx.success();
             }
         }
-        Thread.sleep(300);  //Wait for pruning to kick in
+        Thread.sleep(200);  //Wait for pruning to kick in
         changes = changeReader.getAllChanges();
         assertEquals(10, changes.size());
     }
