@@ -50,7 +50,7 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
                 ChangeFeedConfiguration
                         .defaultConfiguration()
                         .withMaxChanges(3)
-                        .withPruneDelay(200),
+                        .withPruneDelay(100),
                 getDatabase()));
 
         runtime.start();
