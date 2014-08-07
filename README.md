@@ -55,10 +55,18 @@ Edit neo4j.properties to register the ChangeFeed module:
 
 ```
 com.graphaware.runtime.enabled=true
-com.graphaware.module.CFM.1=com.graphaware.module.changefeed.ChangeFeedModuleBootstrapper #CFM becomes the module ID
-com.graphaware.module.CFM.maxChanges=100 #optional, default is 100
-com.graphaware.module.CFM.pruneDelay=10000 #optional, default is 10000 (10 seconds)
-com.graphaware.module.CFM.pruneWhenExceeded=10 #optional, default is 10
+
+#CFM becomes the module ID:
+com.graphaware.module.CFM.1=com.graphaware.module.changefeed.ChangeFeedModuleBootstrapper
+
+#optional, default is 100:
+com.graphaware.module.CFM.maxChanges=100
+
+#optional, default is 10000 (10 seconds):
+com.graphaware.module.CFM.pruneDelay=10000
+
+#optional, default is 10;
+com.graphaware.module.CFM.pruneWhenExceeded=10
 ```
 
 Note that "CFM" becomes the module ID. It is possible to register the ChangeFeed module multiple times with different
