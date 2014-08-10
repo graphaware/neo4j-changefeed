@@ -62,7 +62,7 @@ public class ChangeFeedApi {
      * Get a list of changes made to the graph, where each item represents all changes made within a transaction.
      *
      * @param moduleId ID of the {@link com.graphaware.module.changefeed.ChangeFeedModule} that has written the changes.
-     * @param uuid      uuid of change set (optional). All changes which occur after the change with this uuid will be returned
+     * @param uuid     uuid of change set (optional). All changes which occur after the change with this uuid will be returned
      * @param limit    maximum number of changes to return (optional). Note that this is upper limit only, there might not be that many changes.
      * @return Collection of {@link com.graphaware.module.changefeed.domain.ChangeSet}, latest change first.
      */

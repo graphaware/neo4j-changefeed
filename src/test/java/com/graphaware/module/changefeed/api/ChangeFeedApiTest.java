@@ -3,8 +3,6 @@ package com.graphaware.module.changefeed.api;
 import com.graphaware.module.changefeed.ChangeFeedConfiguration;
 import com.graphaware.module.changefeed.ChangeFeedModule;
 import com.graphaware.module.changefeed.domain.ChangeSet;
-import com.graphaware.module.changefeed.domain.Labels;
-import com.graphaware.module.changefeed.domain.Relationships;
 import com.graphaware.module.changefeed.util.UuidUtil;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
@@ -16,8 +14,6 @@ import com.graphaware.test.integration.DatabaseIntegrationTest;
 import org.apache.commons.lang.ArrayUtils;
 import org.junit.Test;
 import org.neo4j.cypher.javacompat.ExecutionEngine;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
 
@@ -25,10 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.graphaware.common.util.IterableUtils.count;
-import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
 import static com.graphaware.module.changefeed.domain.Labels._GA_ChangeSet;
-import static com.graphaware.module.changefeed.domain.Properties.MODULE_ID;
-import static com.graphaware.module.changefeed.domain.Properties.UUID;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
 
@@ -45,7 +38,7 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
     public void setUp() throws Exception {
         super.setUp();
 
-        uuids=new ArrayList<>();
+        uuids = new ArrayList<>();
 
         TimingStrategy timingStrategy = FixedDelayTimingStrategy
                 .getInstance()

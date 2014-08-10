@@ -61,17 +61,19 @@ public class ChangeSetCache {
     /**
      * Get a number of latest changes newer than the given uuid.
      *
-     * @param uuid      uuid of all returned changes will be more recent than this. Null will return all changes.
-     * @param limit     the number of changes to get.
+     * @param uuid  uuid of all returned changes will be more recent than this. Null will return all changes.
+     * @param limit the number of changes to get.
      * @return changes ordered from newest to oldest. The maximum number of changes returned is limited by the capacity
-     *         of the cache, the number of changes currently in cache, the provided limit, and the provided uuid,
-     *         whichever returns fewer changes.
+     * of the cache, the number of changes currently in cache, the provided limit, and the provided uuid,
+     * whichever returns fewer changes.
      */
     public Collection<ChangeSet> getChanges(String uuid, int limit) {
         List<ChangeSet> result = new LinkedList<>();
 
         for (ChangeSet changeSet : changes) {
-            if (uuid==null || changeSet.getUuid().equals(uuid)) {
+            if (uuid != null && uuid.equals(changeSet.getUuid())) {
+                break;
+            } else {
                 result.add(changeSet);
             }
             if (result.size() >= limit) {

@@ -20,8 +20,6 @@ import com.graphaware.module.changefeed.ChangeFeedModule;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.domain.Labels;
 import com.graphaware.module.changefeed.domain.Relationships;
-import com.graphaware.module.changefeed.util.EaioUuidGenerator;
-import com.graphaware.module.changefeed.util.UuidGenerator;
 import org.neo4j.graphdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,8 +121,8 @@ public class GraphChangeReader implements ChangeReader {
             while (count < limit && nextRel != null) {
                 Node changeNode = nextRel.getEndNode();
 
-                ChangeSet changeSet = new ChangeSet((String)changeNode.getProperty(UUID), (long) changeNode.getProperty(TIMESTAMP));
-                if (uuid!=null && changeSet.getUuid().equals(uuid)) {
+                ChangeSet changeSet = new ChangeSet((String) changeNode.getProperty(UUID), (long) changeNode.getProperty(TIMESTAMP));
+                if (uuid != null && changeSet.getUuid().equals(uuid)) {
                     break;
                 }
                 changeSet.addChanges((String[]) changeNode.getProperty(CHANGES));

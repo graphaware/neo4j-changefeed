@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static junit.framework.Assert.assertEquals;
 
@@ -40,9 +39,9 @@ public class ChangeSetCacheTest {
     List<String> uuids;
 
     @Before
-    private void setupUuids() {
-        uuids=new ArrayList<>();
-        for(int i=0;i<4;i++) {
+    public void setupUuids() {
+        uuids = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
             uuids.add(uuidGenerator.generateUuid());
         }
     }

@@ -45,7 +45,7 @@ public class ChangeSet {
     /**
      * Construct a new change set.
      *
-     * @param uuid  uuid identifying the change set.
+     * @param uuid      uuid identifying the change set.
      * @param timestamp of the change set.
      */
     public ChangeSet(String uuid, long timestamp) {
@@ -65,6 +65,7 @@ public class ChangeSet {
 
     /**
      * Get the uuid of this change set.
+     *
      * @return uuid identifying this change set
      */
     public String getUuid() {

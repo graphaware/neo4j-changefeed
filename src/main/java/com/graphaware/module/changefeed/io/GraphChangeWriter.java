@@ -126,38 +126,52 @@ public class GraphChangeWriter implements ChangeWriter {
                 Node newestNode = getRoot().getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING).getEndNode();
                 if (newestNode != null) {
                     int changeCount = 1;
-                    Node lastNodeToKeep = oldestNode;
-                    while (changeCount < (keep + mustBeExceededBy)) {
-                        Relationship nextRel = lastNodeToKeep.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
-                        if (nextRel == null) {
-                            break;
-                        }
+                    Node lastNodeToKeep = newestNode;
+                    Relationship nextRel = lastNodeToKeep.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
+
+                    while (changeCount < keep && nextRel != null) {
                         lastNodeToKeep = nextRel.getEndNode();
                         changeCount++;
+                        nextRel = lastNodeToKeep.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
                     }
-                    if (changeCount <= keep) {
+
+                    if (changeCount < keep) {
                         LOG.debug("Nothing to prune");
+                        tx.success();
                         return;
                     }
 
-                    Relationship nextRel = lastNodeToKeep.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
-                    if (nextRel == null) {
+                    //Now check if there are more changes than the pruneWhenExceeded limit
+                    int exceededCount = 0;
+                    Relationship nextExceededByRel = nextRel;
+                    while (exceededCount < mustBeExceededBy && nextExceededByRel != null) {
+                        nextExceededByRel = nextExceededByRel.getEndNode().getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
+                        exceededCount++;
+                    }
+
+                    if (exceededCount < mustBeExceededBy) {
+                        LOG.debug("pruneWhenExceeded limit not exceeded, nothing to prune");
+                        tx.success();
                         return;
                     }
-                    nextRel.delete();
-                    oldestChangeRel.delete();
-                    getRoot().createRelationshipTo(lastNodeToKeep, _GA_CHANGEFEED_OLDEST_CHANGE);
+
+
                     LOG.debug("Preparing to prune change feed");
+                    if (nextRel != null) {
+                        nextRel.delete();
+                        oldestChangeRel.delete();
+                        getRoot().createRelationshipTo(lastNodeToKeep, _GA_CHANGEFEED_OLDEST_CHANGE);
 
-                    Relationship previousChange = oldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
-                    while (previousChange != null) {
-                        Node newOldestNode = previousChange.getStartNode();
-                        previousChange.delete();
+                        Relationship previousChange = oldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
+                        while (previousChange != null) {
+                            Node newOldestNode = previousChange.getStartNode();
+                            previousChange.delete();
+                            oldestNode.delete();
+                            previousChange = newOldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
+                            oldestNode = newOldestNode;
+                        }
                         oldestNode.delete();
-                        previousChange = newOldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
-                        oldestNode = newOldestNode;
                     }
-                    oldestNode.delete();
                     LOG.debug("ChangeFeed pruning complete");
                 }
             }

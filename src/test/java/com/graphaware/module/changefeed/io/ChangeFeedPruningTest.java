@@ -74,9 +74,9 @@ public class ChangeFeedPruningTest {
         database.shutdown();
     }
 
-
-    public void fetchingChangesFromASequenceThatHasBeenPrunedShouldReturnEverything() {
-        List<String> uuids=new ArrayList<>();
+    @Test
+    public void fetchingChangesWithAUuidThatHasBeenPrunedShouldReturnEverything() {
+        List<String> uuids = new ArrayList<>();
 
         //Create 20 changes
         for (int i = 1; i <= 20; i++) {
@@ -103,7 +103,7 @@ public class ChangeFeedPruningTest {
         assertEquals(10, changeReader.getAllChanges().size());
         changes = changeReader.getChangesSince(uuids.get(4));
         assertEquals(10, changes.size());
-        assertEquals(uuids.get(19), it.next().getUuid());
+        assertEquals(uuids.get(19), changes.iterator().next().getUuid());
 
     }
 

@@ -109,14 +109,14 @@ You can issue GET requests to `http://your-server-address:7474/graphaware/change
 made to the graph, most recent change first. {moduleId} is the module ID the ChangeFeed Module was registered with. You
 can omit this part of the URL, in which case "CFM" is assumed as the default value.
 
- Two parameters can be added to each request, `sequence` and `limit`, where `sequence` is the last sequence number the client
- has already seen, so only changes with sequence number higher than the given one will be returned. `limit` is the maximum
+ Two parameters can be added to each request, `uuid` and `limit`, where `uuid` is the uuid of the last change set the client
+ has already seen, so only changes later than the given one will be returned. `limit` is the maximum
  number of changes to return, most recent change first. A GET request using these parameters would be issued to the following
- URL: `http://your-server-address:7474/graphaware/changefeed/{moduleId}?since={sequence}&limit={limit}`
+ URL: `http://your-server-address:7474/graphaware/changefeed/{moduleId}?uuid={uuid}&limit={limit}`
 
 The REST API returns a JSON array of changesets. A changeset contains the following:
 
-* sequence - the sequence number of the changeset
+* uuid - the uuid of the changeset
 * timestamp - timestamp of the changeset (represented as the number of milliseconds since 1/1/1970)
 * changes - an array of Strings representing each modification to the graph that occurred in the same transaction
 
@@ -124,14 +124,14 @@ e.g.
 ```json
 [
     {
-        "sequence": 2,
+        "uuid": "376de020-20b3-11e4-83b0-f0b4792288ef",
         "timestamp": 1405411937335,
         "changes": [
             "Created node (:Person {name: Doe})"
         ]
     },
     {
-        "sequence": 1,
+        "uuid": "376de021-20b3-11e4-83b0-f0b4792288ef",
         "timestamp": 1405411933210,
         "changes": [
             "Created node (:Person {name: John})"
@@ -140,9 +140,8 @@ e.g.
 ]
 ```
 
-*NOTE*: Please note that timestamps and sequence numbers are assigned at the instant when the transaction starts committing.
-Consequently, the order does not represent the order in which the transactions have been committed. Also, there can
-be missing sequence numbers if a transaction failed to commit for whatever reason.
+*NOTE*: Please note that timestamps are assigned at the instant when the transaction starts committing.
+Consequently, the order does not represent the order in which the transactions have been committed. 
 
 ### Java API
 

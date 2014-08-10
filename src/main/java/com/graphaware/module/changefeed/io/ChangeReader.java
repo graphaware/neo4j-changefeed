@@ -35,7 +35,7 @@ public interface ChangeReader {
     /**
      * Get latest changes since a certain point.
      *
-     * @param uuid uuid of the first change that will <b>not</b> be included in the result.
+     * @param uuid  uuid of the first change that will <b>not</b> be included in the result.
      * @param limit the maximum number of changes to return.
      * @return changes, latest one first. Note that if there are more changes since the given uuid than the limit,
      * the latest limit number of changes will be returned.
