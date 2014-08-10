@@ -3,6 +3,9 @@ package com.graphaware.module.changefeed.api;
 import com.graphaware.module.changefeed.ChangeFeedConfiguration;
 import com.graphaware.module.changefeed.ChangeFeedModule;
 import com.graphaware.module.changefeed.domain.ChangeSet;
+import com.graphaware.module.changefeed.domain.Labels;
+import com.graphaware.module.changefeed.domain.Relationships;
+import com.graphaware.module.changefeed.util.UuidUtil;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
 import com.graphaware.runtime.config.FluentRuntimeConfiguration;
@@ -13,6 +16,8 @@ import com.graphaware.test.integration.DatabaseIntegrationTest;
 import org.apache.commons.lang.ArrayUtils;
 import org.junit.Test;
 import org.neo4j.cypher.javacompat.ExecutionEngine;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
 
@@ -20,7 +25,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.graphaware.common.util.IterableUtils.count;
+import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
 import static com.graphaware.module.changefeed.domain.Labels._GA_ChangeSet;
+import static com.graphaware.module.changefeed.domain.Properties.MODULE_ID;
+import static com.graphaware.module.changefeed.domain.Properties.UUID;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.tooling.GlobalGraphOperations.at;
 
@@ -31,10 +39,13 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
 
     private ChangeFeedApi api;
     private ExecutionEngine engine;
+    private List<String> uuids;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
+
+        uuids=new ArrayList<>();
 
         TimingStrategy timingStrategy = FixedDelayTimingStrategy
                 .getInstance()
@@ -58,10 +69,20 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
         engine = new ExecutionEngine(getDatabase());
 
         engine.execute("CREATE (michal:Person {name:'Michal'})");
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
+
         engine.execute("CREATE (luanne:Person {name:'Luanne'})");
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
+
+
         engine.execute("CREATE (ga:Company {name:'GraphAware'})");
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
+
+
         engine.execute("MATCH (michal:Person {name:'Michal'}), (ga:Company {name:'GraphAware'}), (luanne:Person {name:'Luanne'}) " +
                 "MERGE (michal)-[:WORKS_FOR]->(ga)<-[:WORKS_FOR]-(luanne)");
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
+
 
         api = new ChangeFeedApi(getDatabase());
     }
@@ -71,9 +92,9 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
         List<ChangeSet> result = new ArrayList<>(api.getChangeFeed(null, null));
         assertEquals(3, result.size());
 
-        assertEquals(4, result.get(0).getSequence());
-        assertEquals(3, result.get(1).getSequence());
-        assertEquals(2, result.get(2).getSequence());
+        assertEquals(uuids.get(3), result.get(0).getUuid());
+        assertEquals(uuids.get(2), result.get(1).getUuid());
+        assertEquals(uuids.get(1), result.get(2).getUuid());
 
         assertEquals("{Created relationship (:Person {name: Michal})-[:WORKS_FOR]->(:Company {name: GraphAware}),Created relationship (:Person {name: Luanne})-[:WORKS_FOR]->(:Company {name: GraphAware})}", ArrayUtils.toString(result.get(0).getChangesAsArray()));
         assertEquals("{Created node (:Company {name: GraphAware})}", ArrayUtils.toString(result.get(1).getChangesAsArray()));
@@ -87,25 +108,25 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
         List<ChangeSet> result = new ArrayList<>(api.getChangeFeed("CFM", null, 2));
         assertEquals(2, result.size());
 
-        assertEquals(4, result.get(0).getSequence());
-        assertEquals(3, result.get(1).getSequence());
+        assertEquals(uuids.get(3), result.get(0).getUuid());
+        assertEquals(uuids.get(2), result.get(1).getUuid());
     }
 
     @Test
     public void shouldReturnCorrectNumberOfResultsWhenAskedSince() {
-        List<ChangeSet> result = new ArrayList<>(api.getChangeFeed(2, null));
+        List<ChangeSet> result = new ArrayList<>(api.getChangeFeed(uuids.get(1), null));
         assertEquals(2, result.size());
 
-        assertEquals(4, result.get(0).getSequence());
-        assertEquals(3, result.get(1).getSequence());
+        assertEquals(uuids.get(3), result.get(0).getUuid());
+        assertEquals(uuids.get(2), result.get(1).getUuid());
     }
 
     @Test
     public void shouldReturnCorrectNumberOfResultsWhenAskedSinceWithLimit() {
-        List<ChangeSet> result = new ArrayList<>(api.getChangeFeed(2, 1));
+        List<ChangeSet> result = new ArrayList<>(api.getChangeFeed(uuids.get(2), 1));
         assertEquals(1, result.size());
 
-        assertEquals(4, result.get(0).getSequence());
+        assertEquals(uuids.get(3), result.get(0).getUuid());
     }
 
     @Test(expected = NotFoundException.class)
@@ -130,4 +151,5 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
             tx.success();
         }
     }
+
 }

@@ -29,38 +29,30 @@ import java.util.*;
  */
 public class ChangeSet {
 
-    private final long sequence;
+    private final String uuid;
     private final long timestamp;
     private final List<String> changes = new LinkedList<>();
 
     /**
      * Construct a new change set with timestamp of now.
      *
-     * @param sequence sequence number of the change set.
+     * @param uuid uuid identifying the change set.
      */
-    public ChangeSet(long sequence) {
-        this(sequence, new Date().getTime());
+    public ChangeSet(String uuid) {
+        this(uuid, new Date().getTime());
     }
 
     /**
      * Construct a new change set.
      *
-     * @param sequence  sequence number of the change set.
+     * @param uuid  uuid identifying the change set.
      * @param timestamp of the change set.
      */
-    public ChangeSet(long sequence, long timestamp) {
-        this.sequence = sequence;
+    public ChangeSet(String uuid, long timestamp) {
+        this.uuid = uuid;
         this.timestamp = timestamp;
     }
 
-    /**
-     * Get the sequence number of this change set.
-     *
-     * @return sequence number.
-     */
-    public long getSequence() {
-        return sequence;
-    }
 
     /**
      * Get the timestamp of this change set.
@@ -72,12 +64,11 @@ public class ChangeSet {
     }
 
     /**
-     * Add a change to this change set.
-     *
-     * @param change to add.
+     * Get the uuid of this change set.
+     * @return uuid identifying this change set
      */
-    public void addChange(String change) {
-        changes.add(change);
+    public String getUuid() {
+        return uuid;
     }
 
     /**
@@ -122,6 +113,10 @@ public class ChangeSet {
      */
     @Override
     public String toString() {
-        return "ChangeSet (" + sequence + ", " + timestamp + "): " + ArrayUtils.primitiveOrStringArrayToString(getChangesAsArray());
+        return "ChangeSet{" +
+                "uuid='" + uuid + '\'' +
+                ", timestamp=" + timestamp +
+                ", changes=" + ArrayUtils.primitiveOrStringArrayToString(changes) +
+                '}';
     }
 }

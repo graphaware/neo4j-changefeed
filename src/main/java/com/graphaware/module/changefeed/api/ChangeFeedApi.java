@@ -48,42 +48,42 @@ public class ChangeFeedApi {
      * Get a list of changes made to the graph, where each item represents all changes made within a transaction.
      * Use this API if a single {@link com.graphaware.module.changefeed.ChangeFeedModule} is registered with module ID equal to {@link com.graphaware.module.changefeed.ChangeFeedModule#DEFAULT_MODULE_ID}.
      *
-     * @param since sequence number (optional). All changes with sequence number greater than this parameter are returned.
+     * @param uuid  uuid of change set (optional). All changes which occur after the change with this uuid will be returned
      * @param limit maximum number of changes to return (optional). Note that this is upper limit only, there might not be that many changes.
      * @return Collection of {@link com.graphaware.module.changefeed.domain.ChangeSet}, latest change first.
      */
     @RequestMapping(value = "/", method = RequestMethod.GET)
     @ResponseBody
-    public Collection<ChangeSet> getChangeFeed(@RequestParam(value = "since", required = false) Integer since, @RequestParam(value = "limit", required = false) Integer limit) {
-        return getChangeFeed(DEFAULT_MODULE_ID, since, limit);
+    public Collection<ChangeSet> getChangeFeed(@RequestParam(value = "uuid", required = false) String uuid, @RequestParam(value = "limit", required = false) Integer limit) {
+        return getChangeFeed(DEFAULT_MODULE_ID, uuid, limit);
     }
 
     /**
      * Get a list of changes made to the graph, where each item represents all changes made within a transaction.
      *
      * @param moduleId ID of the {@link com.graphaware.module.changefeed.ChangeFeedModule} that has written the changes.
-     * @param since    sequence number (optional). All changes with sequence number greater than this parameter are returned.
+     * @param uuid      uuid of change set (optional). All changes which occur after the change with this uuid will be returned
      * @param limit    maximum number of changes to return (optional). Note that this is upper limit only, there might not be that many changes.
      * @return Collection of {@link com.graphaware.module.changefeed.domain.ChangeSet}, latest change first.
      */
     @RequestMapping(value = "/{moduleId}", method = RequestMethod.GET)
     @ResponseBody
-    public Collection<ChangeSet> getChangeFeed(@PathVariable String moduleId, @RequestParam(value = "since", required = false) Integer since, @RequestParam(value = "limit", required = false) Integer limit) {
+    public Collection<ChangeSet> getChangeFeed(@PathVariable String moduleId, @RequestParam(value = "uuid", required = false) String uuid, @RequestParam(value = "limit", required = false) Integer limit) {
         ChangeReader changeReader = new CachingGraphChangeReader(database, moduleId);
 
-        if (since == null && limit == null) {
+        if (uuid == null && limit == null) {
             return changeReader.getAllChanges();
         }
 
-        if (since == null) {
+        if (uuid == null) {
             return changeReader.getNumberOfChanges(limit);
         }
 
         if (limit == null) {
-            return changeReader.getChangesSince(since);
+            return changeReader.getChangesSince(uuid);
         }
 
-        return changeReader.getNumberOfChangesSince(since, limit);
+        return changeReader.getNumberOfChangesSince(uuid, limit);
     }
 
 

@@ -19,12 +19,13 @@ package com.graphaware.module.changefeed.io;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.domain.Labels;
 import com.graphaware.module.changefeed.domain.Relationships;
+import com.graphaware.module.changefeed.util.EaioUuidGenerator;
+import com.graphaware.module.changefeed.util.UuidGenerator;
 import org.neo4j.graphdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static com.graphaware.common.util.IterableUtils.getSingleOrNull;
 import static com.graphaware.module.changefeed.domain.Labels._GA_ChangeSet;
@@ -40,11 +41,11 @@ import static org.neo4j.graphdb.Direction.OUTGOING;
 public class GraphChangeWriter implements ChangeWriter {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphChangeWriter.class);
+    private final UuidGenerator uuidGenerator = new EaioUuidGenerator();
 
     private final GraphDatabaseService database;
     private final String moduleId;
 
-    private AtomicLong sequence = null;
     private Node root;
 
     /**
@@ -64,7 +65,6 @@ public class GraphChangeWriter implements ChangeWriter {
     @Override
     public void initialize() {
         root = getOrCreateRoot();
-        initializeSequence();
     }
 
 
@@ -76,7 +76,7 @@ public class GraphChangeWriter implements ChangeWriter {
         try (Transaction tx = database.beginTx()) {
             tx.acquireWriteLock(getRoot());
 
-            ChangeSet changeSet = new ChangeSet(sequence.incrementAndGet());
+            ChangeSet changeSet = new ChangeSet(uuidGenerator.generateUuid());
             changeSet.addChanges(changes);
             recordChanges(changeSet);
 
@@ -94,7 +94,7 @@ public class GraphChangeWriter implements ChangeWriter {
             tx.acquireWriteLock(getRoot());
 
             Node changeNode = database.createNode(_GA_ChangeSet);
-            changeNode.setProperty(SEQUENCE, changeSet.getSequence());
+            changeNode.setProperty(UUID, changeSet.getUuid());
             changeNode.setProperty(TIMESTAMP, changeSet.getTimestamp());
             changeNode.setProperty(CHANGES, changeSet.getChangesAsArray());
 
@@ -125,24 +125,40 @@ public class GraphChangeWriter implements ChangeWriter {
                 Node oldestNode = oldestChangeRel.getEndNode();
                 Node newestNode = getRoot().getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING).getEndNode();
                 if (newestNode != null) {
-                    long highSequence = (long) newestNode.getProperty(SEQUENCE);
-                    long lowSequence = (long) oldestNode.getProperty(SEQUENCE);
-                    long nodesToDelete = ((highSequence - lowSequence) + 1) - keep;
-                    Node newOldestNode = null;
-                    if (nodesToDelete >= mustBeExceededBy) {
-                        LOG.debug("Preparing to prune change feed by deleting {} nodes", nodesToDelete);
-                        getRoot().getSingleRelationship(_GA_CHANGEFEED_OLDEST_CHANGE, OUTGOING).delete();
-                        while (nodesToDelete > 0) {
-                            Relationship rel = oldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
-                            newOldestNode = rel.getStartNode();
-                            rel.delete();
-                            oldestNode.delete();
-                            oldestNode = newOldestNode;
-                            nodesToDelete--;
+                    int changeCount = 1;
+                    Node lastNodeToKeep = oldestNode;
+                    while (changeCount < (keep + mustBeExceededBy)) {
+                        Relationship nextRel = lastNodeToKeep.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
+                        if (nextRel == null) {
+                            break;
                         }
-                        getRoot().createRelationshipTo(newOldestNode, _GA_CHANGEFEED_OLDEST_CHANGE);
-                        LOG.debug("ChangeFeed pruning complete");
+                        lastNodeToKeep = nextRel.getEndNode();
+                        changeCount++;
                     }
+                    if (changeCount <= keep) {
+                        LOG.debug("Nothing to prune");
+                        return;
+                    }
+
+                    Relationship nextRel = lastNodeToKeep.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
+                    if (nextRel == null) {
+                        return;
+                    }
+                    nextRel.delete();
+                    oldestChangeRel.delete();
+                    getRoot().createRelationshipTo(lastNodeToKeep, _GA_CHANGEFEED_OLDEST_CHANGE);
+                    LOG.debug("Preparing to prune change feed");
+
+                    Relationship previousChange = oldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
+                    while (previousChange != null) {
+                        Node newOldestNode = previousChange.getStartNode();
+                        previousChange.delete();
+                        oldestNode.delete();
+                        previousChange = newOldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
+                        oldestNode = newOldestNode;
+                    }
+                    oldestNode.delete();
+                    LOG.debug("ChangeFeed pruning complete");
                 }
             }
             tx.success();
@@ -182,21 +198,4 @@ public class GraphChangeWriter implements ChangeWriter {
         return root;
     }
 
-    /**
-     * Initialize the sequence to the last used number. No need to synchronize, called from constructor,
-     * thus in a single thread.
-     */
-    private void initializeSequence() {
-        long startSequence = 0L;
-
-        try (Transaction tx = database.beginTx()) {
-            Relationship nextRel = getRoot().getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, OUTGOING);
-            if (nextRel != null) {
-                startSequence = (long) nextRel.getEndNode().getProperty(SEQUENCE, 0L);
-            }
-            tx.success();
-        }
-
-        sequence = new AtomicLong(startSequence);
-    }
 }

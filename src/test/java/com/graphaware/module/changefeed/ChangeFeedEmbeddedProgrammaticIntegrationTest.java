@@ -22,6 +22,7 @@ import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.domain.Labels;
 import com.graphaware.module.changefeed.domain.Relationships;
 import com.graphaware.module.changefeed.io.GraphChangeReader;
+import com.graphaware.module.changefeed.util.UuidUtil;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
 import com.graphaware.runtime.config.FluentRuntimeConfiguration;
@@ -35,9 +36,7 @@ import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
 import org.neo4j.helpers.collection.Iterables;
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.Iterator;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -75,7 +74,8 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
             assertNotNull(changeRoot);
             Relationship rel = changeRoot.getSingleRelationship(Relationships._GA_CHANGEFEED_OLDEST_CHANGE, Direction.OUTGOING);
             assertNotNull(rel);
-            assertEquals(1L, rel.getEndNode().getProperty(SEQUENCE));
+            String[] changes = (String[]) rel.getEndNode().getProperty(CHANGES);
+            assertEquals(3,changes.length);
             tx.success();
         }
     }
@@ -84,51 +84,57 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
     public void graphChangesShouldAppearInTheChangeFeed() throws InterruptedException {
         registerSingleModuleAndStart();
 
-        performModifications();
+        List<String> uuids = performModifications();
 
         Thread.sleep(1200); //wait for pruning
 
-        verifyChanges(3, new GraphChangeReader(getDatabase()).getAllChanges());
-        verifyChanges(3, new GraphChangeReader(getDatabase(), "CFM").getAllChanges());
-        verifyChanges(3, new CachingGraphChangeReader(getDatabase()).getAllChanges());
-        verifyChanges(3, new CachingGraphChangeReader(getDatabase(), "CFM").getAllChanges());
+        verifyChanges(3, new GraphChangeReader(getDatabase()).getAllChanges(), uuids);
+        verifyChanges(3, new GraphChangeReader(getDatabase(), "CFM").getAllChanges(), uuids);
+        verifyChanges(3, new CachingGraphChangeReader(getDatabase()).getAllChanges(), uuids);
+        verifyChanges(3, new CachingGraphChangeReader(getDatabase(), "CFM").getAllChanges(),uuids );
 
-        verifyChanges(3, new GraphChangeReader(getDatabase()).getNumberOfChanges(3));
-        verifyChanges(3, new GraphChangeReader(getDatabase(), "CFM").getNumberOfChanges(3));
-        verifyChanges(3, new CachingGraphChangeReader(getDatabase()).getNumberOfChanges(3));
-        verifyChanges(3, new CachingGraphChangeReader(getDatabase(), "CFM").getNumberOfChanges(3));
+        verifyChanges(3, new GraphChangeReader(getDatabase()).getNumberOfChanges(3), uuids);
+        verifyChanges(3, new GraphChangeReader(getDatabase(), "CFM").getNumberOfChanges(3), uuids);
+        verifyChanges(3, new CachingGraphChangeReader(getDatabase()).getNumberOfChanges(3), uuids);
+        verifyChanges(3, new CachingGraphChangeReader(getDatabase(), "CFM").getNumberOfChanges(3), uuids);
 
-        verifyChanges(2, new GraphChangeReader(getDatabase()).getNumberOfChanges(2));
-        verifyChanges(2, new GraphChangeReader(getDatabase(), "CFM").getNumberOfChanges(2));
-        verifyChanges(2, new CachingGraphChangeReader(getDatabase()).getNumberOfChanges(2));
-        verifyChanges(2, new CachingGraphChangeReader(getDatabase(), "CFM").getNumberOfChanges(2));
+        verifyChanges(2, new GraphChangeReader(getDatabase()).getNumberOfChanges(2), uuids);
+        verifyChanges(2, new GraphChangeReader(getDatabase(), "CFM").getNumberOfChanges(2), uuids);
+        verifyChanges(2, new CachingGraphChangeReader(getDatabase()).getNumberOfChanges(2), uuids);
+        verifyChanges(2, new CachingGraphChangeReader(getDatabase(), "CFM").getNumberOfChanges(2),uuids );
 
-        verifyChanges(3, new GraphChangeReader(getDatabase()).getChangesSince(0));
-        verifyChanges(3, new GraphChangeReader(getDatabase(), "CFM").getChangesSince(0));
-        verifyChanges(3, new CachingGraphChangeReader(getDatabase()).getChangesSince(0));
-        verifyChanges(3, new CachingGraphChangeReader(getDatabase(), "CFM").getChangesSince(0));
+        verifyChanges(3, new GraphChangeReader(getDatabase()).getChangesSince(uuids.get(0)), uuids);
+        verifyChanges(3, new GraphChangeReader(getDatabase(), "CFM").getChangesSince(uuids.get(0)), uuids);
+        verifyChanges(3, new CachingGraphChangeReader(getDatabase()).getChangesSince(uuids.get(0)), uuids);
+        verifyChanges(3, new CachingGraphChangeReader(getDatabase(), "CFM").getChangesSince(uuids.get(0)),uuids );
 
-        verifyChanges(2, new GraphChangeReader(getDatabase()).getChangesSince(2));
-        verifyChanges(2, new GraphChangeReader(getDatabase(), "CFM").getChangesSince(2));
-        verifyChanges(2, new CachingGraphChangeReader(getDatabase()).getChangesSince(2));
-        verifyChanges(2, new CachingGraphChangeReader(getDatabase(), "CFM").getChangesSince(2));
+        verifyChanges(2, new GraphChangeReader(getDatabase()).getChangesSince(uuids.get(1)),uuids );
+        verifyChanges(2, new GraphChangeReader(getDatabase(), "CFM").getChangesSince(uuids.get(1)), uuids);
+        verifyChanges(2, new CachingGraphChangeReader(getDatabase()).getChangesSince(uuids.get(1)), uuids);
+        verifyChanges(2, new CachingGraphChangeReader(getDatabase(), "CFM").getChangesSince(uuids.get(1)),uuids );
 
-        verifyChanges(3, new GraphChangeReader(getDatabase()).getNumberOfChangesSince(0, 3));
-        verifyChanges(3, new GraphChangeReader(getDatabase(), "CFM").getNumberOfChangesSince(0, 3));
-        verifyChanges(3, new CachingGraphChangeReader(getDatabase()).getNumberOfChangesSince(0, 3));
-        verifyChanges(3, new CachingGraphChangeReader(getDatabase(), "CFM").getNumberOfChangesSince(0, 3));
+        verifyChanges(3, new GraphChangeReader(getDatabase()).getNumberOfChangesSince(uuids.get(0), 3), uuids);
+        verifyChanges(3, new GraphChangeReader(getDatabase(), "CFM").getNumberOfChangesSince(uuids.get(0), 3),uuids );
+        verifyChanges(3, new CachingGraphChangeReader(getDatabase()).getNumberOfChangesSince(uuids.get(0), 3),uuids );
+        verifyChanges(3, new CachingGraphChangeReader(getDatabase(), "CFM").getNumberOfChangesSince(uuids.get(0), 3),uuids );
 
-        verifyChanges(1, new GraphChangeReader(getDatabase()).getNumberOfChangesSince(2, 1));
-        verifyChanges(1, new GraphChangeReader(getDatabase(), "CFM").getNumberOfChangesSince(3, 3));
-        verifyChanges(1, new CachingGraphChangeReader(getDatabase()).getNumberOfChangesSince(3, 3));
-        verifyChanges(1, new CachingGraphChangeReader(getDatabase(), "CFM").getNumberOfChangesSince(2, 1));
+        verifyChanges(1, new GraphChangeReader(getDatabase()).getNumberOfChangesSince(uuids.get(1), 1), uuids);
+        verifyChanges(1, new GraphChangeReader(getDatabase(), "CFM").getNumberOfChangesSince(uuids.get(2), 3), uuids);
+        verifyChanges(1, new CachingGraphChangeReader(getDatabase()).getNumberOfChangesSince(uuids.get(2), 3), uuids);
+        verifyChanges(1, new CachingGraphChangeReader(getDatabase(), "CFM").getNumberOfChangesSince(uuids.get(1), 1), uuids);
     }
 
-    private void performModifications() {
+    /**
+     * Perform modifications in the graph
+     * @return A List of UUID's assigned to each changeset, sorted in order of change creation.
+     */
+    private List<String> performModifications() {
+        List<String> uuids = new ArrayList<>();
         try (Transaction tx = getDatabase().beginTx()) {
             getDatabase().createNode().setProperty("name", "will not appear in changefeed");
             tx.success();
         }
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
 
         Node node1, node2;
         try (Transaction tx = getDatabase().beginTx()) {
@@ -141,12 +147,14 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
             tx.success();
         }
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
 
         try (Transaction tx = getDatabase().beginTx()) {
             node2.setProperty("name", "GraphAware");
             node2.setProperty("location", "London");
             tx.success();
         }
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
 
         try (Transaction tx = getDatabase().beginTx()) {
             node1.setProperty("name", "Michal");
@@ -154,9 +162,15 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
             node2.removeLabel(DynamicLabel.label("Company"));
             tx.success();
         }
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
+
+
+        return uuids;
     }
 
-    private void verifyChanges(int number, Collection<ChangeSet> changes) {
+
+
+    private void verifyChanges(int number, Collection<ChangeSet> changes, List<String> uuids) {
         assertEquals(number, changes.size());
 
         if (number < 1) {
@@ -170,7 +184,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         assertEquals(2, set1.getChanges().size());
         assertTrue(set1.getChanges().contains("Changed node (:Company {location: London, name: GraphAware}) to ({name: GraphAware})"));
         assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
-        assertEquals(4, set1.getSequence());
+        assertEquals(uuids.get(3), set1.getUuid());
 
         if (number < 2) {
             return;
@@ -180,7 +194,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         long set2Date = set2.getTimestamp();
         assertEquals(1, set2.getChanges().size());
         assertTrue(set2.getChanges().contains("Changed node (:Company) to (:Company {location: London, name: GraphAware})"));
-        assertEquals(3, set2.getSequence());
+        assertEquals(uuids.get(2), set2.getUuid());
 
         if (number < 3) {
             return;
@@ -192,7 +206,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         assertTrue(set3.getChanges().contains("Created node (:Company)"));
         assertTrue(set3.getChanges().contains("Created node (:Person {name: MB})"));
         assertTrue(set3.getChanges().contains("Created relationship (:Person {name: MB})-[:WORKS_AT]->(:Company)"));
-        assertEquals(2, set3.getSequence());
+        assertEquals(uuids.get(1), set3.getUuid());
 
         assertTrue(set1Date >= set2Date);
         assertTrue(set2Date >= set3Date);
@@ -202,7 +216,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
     public void transactionsNotCommittedShouldNotReflectInTheChangeFeed() {
         registerSingleModuleAndStart();
 
-        performChangesWithException();
+        List<String> uuids = performChangesWithException();
 
         Collection<ChangeSet> changes = new GraphChangeReader(getDatabase()).getAllChanges();
 
@@ -213,7 +227,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         long set1Date = set1.getTimestamp();
         assertEquals(1, set1.getChanges().size());
         assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
-        assertEquals(set1.getSequence(), 2);
+        assertEquals(uuids.get(1),set1.getUuid());
 
         ChangeSet set2 = it.next();
         long set2Date = set2.getTimestamp();
@@ -221,7 +235,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         assertTrue(set2.getChanges().contains("Created node (:Company)"));
         assertTrue(set2.getChanges().contains("Created node (:Person {name: MB})"));
         assertTrue(set2.getChanges().contains("Created relationship (:Person {name: MB})-[:WORKS_AT]->(:Company)"));
-        assertEquals(1, set2.getSequence());
+        assertEquals(uuids.get(0), set2.getUuid());
 
         assertTrue(set1Date >= set2Date);
     }
@@ -230,7 +244,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
     public void transactionsNotCommittedShouldNotReflectInCachedChangeFeed() {
         registerSingleModuleAndStart();
 
-        performChangesWithException();
+        List<String> uuids = performChangesWithException();
 
         Collection<ChangeSet> changes = new CachingGraphChangeReader(getDatabase()).getAllChanges();
 
@@ -241,7 +255,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         long set1Date = set1.getTimestamp();
         assertEquals(1, set1.getChanges().size());
         assertTrue(set1.getChanges().contains("Changed node (:Person {name: MB}) to (:Person {name: Michal})"));
-        assertEquals(set1.getSequence(), 2);
+        assertEquals(uuids.get(1),set1.getUuid());
 
         ChangeSet set2 = it.next();
         long set2Date = set2.getTimestamp();
@@ -249,12 +263,13 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         assertTrue(set2.getChanges().contains("Created node (:Company)"));
         assertTrue(set2.getChanges().contains("Created node (:Person {name: MB})"));
         assertTrue(set2.getChanges().contains("Created relationship (:Person {name: MB})-[:WORKS_AT]->(:Company)"));
-        assertEquals(1, set2.getSequence());
+        assertEquals(uuids.get(0), set2.getUuid());
 
         assertTrue(set1Date >= set2Date);
     }
 
-    private void performChangesWithException() {
+    private List<String> performChangesWithException() {
+        List<String> uuids=new ArrayList<>();
         Node node1, node2;
 
         try (Transaction tx = getDatabase().beginTx()) {
@@ -264,6 +279,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
                     .create();
             tx.success();
         }
+
         try (Transaction tx = getDatabase().beginTx()) {
 
             node1 = getDatabase().createNode();
@@ -275,6 +291,8 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
             tx.success();
         }
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
+
 
         try (Transaction tx = getDatabase().beginTx()) {
             node2.setProperty("name", "GraphAware");
@@ -295,11 +313,16 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
             node1.setProperty("name", "Michal");
             tx.success();
         }
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
+
+        return uuids;
     }
 
     @Test
-    public void sequenceNumbersShouldBeOrdered() throws InterruptedException {
+    public void changeSetsShouldBeOrdered() throws InterruptedException {
         registerSingleModuleAndStart();
+
+        final List<String> uuids=new ArrayList<>();
 
         //slow down the first tx:
         getDatabase().registerTransactionEventHandler(new TransactionEventHandler.Adapter<Void>() {
@@ -327,6 +350,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
                     getDatabase().createNode().setProperty("name", "One");
                     tx.success();
                 }
+                uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
             }
         });
 
@@ -337,6 +361,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
                     getDatabase().createNode().setProperty("name", "Two");
                     tx.success();
                 }
+                uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
             }
         });
 
@@ -348,8 +373,8 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         assertEquals(2, changes.size());
         Iterator<ChangeSet> it = changes.iterator();
 
-        assertEquals(2, it.next().getSequence());
-        assertEquals(1, it.next().getSequence());
+        assertEquals(uuids.get(1), it.next().getUuid());
+        assertEquals(uuids.get(0), it.next().getUuid());
 
         //caching
         GraphChangeReader reader = new CachingGraphChangeReader(getDatabase());
@@ -357,8 +382,8 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         assertEquals(2, changes.size());
         it = changes.iterator();
 
-        assertEquals(2, it.next().getSequence());
-        assertEquals(1, it.next().getSequence());
+        assertEquals(uuids.get(1), it.next().getUuid());
+        assertEquals(uuids.get(0), it.next().getUuid());
     }
 
     @Test
@@ -418,7 +443,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         new CachingGraphChangeReader(getDatabase()).getAllChanges();
     }
 
-    @Test
+   /* @Test
     public void sequenceShouldStartWhereItLeftOff() {
         //previously, a root has been created:
         try (Transaction tx = getDatabase().beginTx()) {
@@ -441,7 +466,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
         assertEquals(101, new CachingGraphChangeReader(getDatabase()).getAllChanges().iterator().next().getSequence());
         assertEquals(101, new GraphChangeReader(getDatabase()).getAllChanges().iterator().next().getSequence());
-    }
+    }*/
 
     private void registerSingleModuleAndStart() {
         TimingStrategy timingStrategy = FixedDelayTimingStrategy
