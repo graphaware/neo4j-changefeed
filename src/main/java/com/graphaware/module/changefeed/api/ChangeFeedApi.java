@@ -27,6 +27,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 
 import static com.graphaware.module.changefeed.ChangeFeedModule.DEFAULT_MODULE_ID;
 
@@ -89,11 +91,13 @@ public class ChangeFeedApi {
 
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public void handleIllegalArguments() {
+    public Map<String, String> handleIllegalArgument(IllegalArgumentException e) {
+        return Collections.singletonMap("message", e.getMessage());
     }
 
     @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public void handleNotFound() {
+    public Map<String, String> handleNotFound(NotFoundException e) {
+        return Collections.singletonMap("message", e.getMessage());
     }
 }

@@ -35,8 +35,8 @@ import static junit.framework.Assert.assertEquals;
 
 public class ChangeSetCacheTest {
 
-    final UuidGenerator uuidGenerator = new EaioUuidGenerator();
-    List<String> uuids;
+    private final UuidGenerator uuidGenerator = new EaioUuidGenerator();
+    private List<String> uuids;
 
     @Before
     public void setupUuids() {
