@@ -19,6 +19,7 @@ package com.graphaware.module.changefeed.io;
 import com.graphaware.module.changefeed.ChangeFeedConfiguration;
 import com.graphaware.module.changefeed.ChangeFeedModule;
 import com.graphaware.module.changefeed.domain.ChangeSet;
+import com.graphaware.module.changefeed.util.UuidUtil;
 import com.graphaware.runtime.GraphAwareRuntime;
 import com.graphaware.runtime.GraphAwareRuntimeFactory;
 import com.graphaware.runtime.config.FluentRuntimeConfiguration;
@@ -34,8 +35,10 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
@@ -72,7 +75,9 @@ public class ChangeFeedPruningTest {
     }
 
     @Test
-    public void fetchingChangesFromASequenceThatHasBeenPrunedShouldReturnEverything() {
+    public void fetchingChangesWithAUuidThatHasBeenPrunedShouldReturnEverything() {
+        List<String> uuids = new ArrayList<>();
+
         //Create 20 changes
         for (int i = 1; i <= 20; i++) {
             try (Transaction tx = database.beginTx()) {
@@ -80,24 +85,26 @@ public class ChangeFeedPruningTest {
                 node.setProperty("age", i);
                 tx.success();
             }
+            uuids.add(UuidUtil.getUuidOfLatestChange(database));
         }
 
         Collection<ChangeSet> changes = changeReader.getAllChanges();
         assertEquals(20, changes.size());
 
-        changes = changeReader.getChangesSince(5);
+        changes = changeReader.getChangesSince(uuids.get(4));
         Iterator<ChangeSet> it = changes.iterator();
 
         assertEquals(15, changes.size());
-        assertEquals(20, it.next().getSequence());
+        assertEquals(uuids.get(19), it.next().getUuid());
 
         ///prune
         module.doSomeWork(new EmptyContext(), database);
 
         assertEquals(10, changeReader.getAllChanges().size());
-        changes = changeReader.getChangesSince(5);
+        changes = changeReader.getChangesSince(uuids.get(4));
         assertEquals(10, changes.size());
-        assertEquals(20, changes.iterator().next().getSequence());
+        assertEquals(uuids.get(19), changes.iterator().next().getUuid());
+
     }
 
     @Test

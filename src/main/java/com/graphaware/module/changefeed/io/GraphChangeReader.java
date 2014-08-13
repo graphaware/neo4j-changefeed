@@ -76,7 +76,7 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getAllChanges() {
-        return getChangesSince(-1);
+        return getChangesSince(null);
     }
 
     /**
@@ -84,33 +84,33 @@ public class GraphChangeReader implements ChangeReader {
      */
     @Override
     public Collection<ChangeSet> getNumberOfChanges(int limit) {
-        return getNumberOfChangesSince(-1, limit);
+        return getNumberOfChangesSince(null, limit);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Collection<ChangeSet> getChangesSince(long since) {
-        return getNumberOfChangesSince(since, Integer.MAX_VALUE);
+    public Collection<ChangeSet> getChangesSince(String uuid) {
+        return getNumberOfChangesSince(uuid, Integer.MAX_VALUE);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Collection<ChangeSet> getNumberOfChangesSince(long since, int limit) {
-        return doGetChanges(since, limit);
+    public Collection<ChangeSet> getNumberOfChangesSince(String uuid, int limit) {
+        return doGetChanges(uuid, limit);
     }
 
     /**
      * Get a list of changes from the graph.
      *
-     * @param since the sequence number of the first change that will not be included in the result, use -1 for all.
+     * @param uuid  the uuid of the first change that will not be included in the result, use null for all.
      * @param limit number of changes to fetch
      * @return List of {@link com.graphaware.module.changefeed.domain.ChangeSet}, latest change first.
      */
-    protected Collection<ChangeSet> doGetChanges(long since, int limit) {
+    protected Collection<ChangeSet> doGetChanges(String uuid, int limit) {
         int count = 0;
         List<ChangeSet> changeFeed = new ArrayList<>();
 
@@ -121,8 +121,8 @@ public class GraphChangeReader implements ChangeReader {
             while (count < limit && nextRel != null) {
                 Node changeNode = nextRel.getEndNode();
 
-                ChangeSet changeSet = new ChangeSet((long) changeNode.getProperty(SEQUENCE), (long) changeNode.getProperty(TIMESTAMP));
-                if (changeSet.getSequence() <= since) {
+                ChangeSet changeSet = new ChangeSet((String) changeNode.getProperty(UUID), (long) changeNode.getProperty(TIMESTAMP));
+                if (uuid != null && changeSet.getUuid().equals(uuid)) {
                     break;
                 }
                 changeSet.addChanges((String[]) changeNode.getProperty(CHANGES));

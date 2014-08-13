@@ -17,46 +17,58 @@
 package com.graphaware.module.changefeed.cache;
 
 import com.graphaware.module.changefeed.domain.ChangeSet;
+import com.graphaware.module.changefeed.util.EaioUuidGenerator;
+import com.graphaware.module.changefeed.util.UuidGenerator;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.test.RepeatRule;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static junit.framework.Assert.assertEquals;
 
 
 public class ChangeSetCacheTest {
 
+    private final UuidGenerator uuidGenerator = new EaioUuidGenerator();
+    private List<String> uuids;
+
+    @Before
+    public void setupUuids() {
+        uuids = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            uuids.add(uuidGenerator.generateUuid());
+        }
+    }
+
     @Rule
     public RepeatRule repeatRule = new RepeatRule();
 
     @Test
     public void capacityShouldNotBeExceeded() {
+
         ChangeSetCache queue = new ChangeSetCache(3);
 
-        ChangeSet c1 = new ChangeSet(1);
-        ChangeSet c2 = new ChangeSet(2);
-        ChangeSet c3 = new ChangeSet(3);
-        ChangeSet c4 = new ChangeSet(4);
+        ChangeSet c1 = new ChangeSet(uuids.get(0));
+        ChangeSet c2 = new ChangeSet(uuids.get(1));
+        ChangeSet c3 = new ChangeSet(uuids.get(2));
+        ChangeSet c4 = new ChangeSet(uuids.get(3));
 
         queue.push(c1);
         queue.push(c2);
         queue.push(c3);
         queue.push(c4);
 
-        assertEquals(3, queue.getChanges(-1, Integer.MAX_VALUE).size());
-        Iterator<ChangeSet> it = queue.getChanges(-1, Integer.MAX_VALUE).iterator();
-        assertEquals(4, it.next().getSequence());
-        assertEquals(3, it.next().getSequence());
-        assertEquals(2, it.next().getSequence());
+        assertEquals(3, queue.getChanges(null, Integer.MAX_VALUE).size());
+        Iterator<ChangeSet> it = queue.getChanges(null, Integer.MAX_VALUE).iterator();
+        assertEquals(uuids.get(3), it.next().getUuid());
+        assertEquals(uuids.get(2), it.next().getUuid());
+        assertEquals(uuids.get(1), it.next().getUuid());
 
     }
 
@@ -64,41 +76,41 @@ public class ChangeSetCacheTest {
     public void changesReturnedShouldNotExceedLimit() {
         ChangeSetCache queue = new ChangeSetCache(3);
 
-        ChangeSet c1 = new ChangeSet(1);
-        ChangeSet c2 = new ChangeSet(2);
-        ChangeSet c3 = new ChangeSet(3);
-        ChangeSet c4 = new ChangeSet(4);
+        ChangeSet c1 = new ChangeSet(uuids.get(0));
+        ChangeSet c2 = new ChangeSet(uuids.get(1));
+        ChangeSet c3 = new ChangeSet(uuids.get(2));
+        ChangeSet c4 = new ChangeSet(uuids.get(3));
 
         queue.push(c1);
         queue.push(c2);
         queue.push(c3);
         queue.push(c4);
 
-        assertEquals(3, queue.getChanges(-1, Integer.MAX_VALUE).size());
-        Collection<ChangeSet> changes = queue.getChanges(-1, 2);
+        assertEquals(3, queue.getChanges(null, Integer.MAX_VALUE).size());
+        Collection<ChangeSet> changes = queue.getChanges(null, 2);
         assertEquals(2, changes.size());
-        Iterator<ChangeSet> it = queue.getChanges(-1, Integer.MAX_VALUE).iterator();
-        assertEquals(4, it.next().getSequence());
-        assertEquals(3, it.next().getSequence());
+        Iterator<ChangeSet> it = queue.getChanges(null, Integer.MAX_VALUE).iterator();
+        assertEquals(uuids.get(3), it.next().getUuid());
+        assertEquals(uuids.get(2), it.next().getUuid());
     }
 
     @Test
     public void latestChangesShouldBeKeptWhenInitializedOverLimit() {
         ChangeSetCache queue = new ChangeSetCache(3);
 
-        ChangeSet c1 = new ChangeSet(1);
-        ChangeSet c2 = new ChangeSet(2);
-        ChangeSet c3 = new ChangeSet(3);
-        ChangeSet c4 = new ChangeSet(4);
+        ChangeSet c1 = new ChangeSet(uuids.get(0));
+        ChangeSet c2 = new ChangeSet(uuids.get(1));
+        ChangeSet c3 = new ChangeSet(uuids.get(2));
+        ChangeSet c4 = new ChangeSet(uuids.get(3));
 
         queue.populate(Arrays.asList(c4, c3, c2, c1));
 
-        assertEquals(3, queue.getChanges(-1, Integer.MAX_VALUE).size());
-        Collection<ChangeSet> changes = queue.getChanges(-1, 2);
+        assertEquals(3, queue.getChanges(null, Integer.MAX_VALUE).size());
+        Collection<ChangeSet> changes = queue.getChanges(null, 2);
         assertEquals(2, changes.size());
-        Iterator<ChangeSet> it = queue.getChanges(-1, Integer.MAX_VALUE).iterator();
-        assertEquals(4, it.next().getSequence());
-        assertEquals(3, it.next().getSequence());
+        Iterator<ChangeSet> it = queue.getChanges(null, Integer.MAX_VALUE).iterator();
+        assertEquals(uuids.get(3), it.next().getUuid());
+        assertEquals(uuids.get(2), it.next().getUuid());
     }
 
 
@@ -106,7 +118,6 @@ public class ChangeSetCacheTest {
     @RepeatRule.Repeat(times = 100)
     public void survivesHeavyConcurrency() throws InterruptedException {
         final ChangeSetCache queue = new ChangeSetCache(10);
-        final AtomicLong sequence = new AtomicLong(0);
         final AtomicBoolean failure = new AtomicBoolean(false);
 
         ExecutorService executor = Executors.newFixedThreadPool(100);
@@ -114,13 +125,13 @@ public class ChangeSetCacheTest {
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
-                    queue.push(new ChangeSet(sequence.incrementAndGet()));
+                    queue.push(new ChangeSet(uuidGenerator.generateUuid()));
                 }
             });
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
-                    if (10 < queue.getChanges(-1, Integer.MAX_VALUE).size()) {
+                    if (10 < queue.getChanges(null, Integer.MAX_VALUE).size()) {
                         failure.set(true);
                     }
                 }
@@ -129,9 +140,9 @@ public class ChangeSetCacheTest {
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
 
-        queue.push(new ChangeSet(sequence.incrementAndGet()));
+        queue.push(new ChangeSet(uuidGenerator.generateUuid()));
 
-        assertEquals(10, queue.getChanges(-1, Integer.MAX_VALUE).size());
+        assertEquals(10, queue.getChanges(null, Integer.MAX_VALUE).size());
 //        assertFalse(failure.get()); //this fails, but we don't care, eventually it's 10
     }
 }

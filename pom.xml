@@ -152,6 +152,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <!--UUID Generator -->
+        <dependency>
+            <groupId>com.eaio.uuid</groupId>
+            <artifactId>uuid</artifactId>
+            <version>3.4</version>
+        </dependency>
+
         <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -191,6 +198,13 @@
 
     </dependencies>
 
+    <repositories>
+        <repository>
+            <id>eaio.com</id>
+            <url>http://eaio.com/maven2</url>
+        </repository>
+    </repositories>
+
     <build>
         <plugins>
             <plugin>
@@ -201,6 +215,24 @@
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                     <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>attached</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <finalName>graphaware-changefeed-${project.version}</finalName>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <appendAssemblyId>false</appendAssemblyId>
                 </configuration>
             </plugin>
             <plugin>

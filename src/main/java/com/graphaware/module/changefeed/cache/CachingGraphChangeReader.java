@@ -40,7 +40,7 @@ public class CachingGraphChangeReader extends GraphChangeReader {
      * {@inheritDoc}
      */
     @Override
-    protected Collection<ChangeSet> doGetChanges(long since, int limit) {
-        return cache.getChanges(since, limit);
+    protected Collection<ChangeSet> doGetChanges(String uuid, int limit) {
+        return cache.getChanges(uuid, limit);
     }
 }
