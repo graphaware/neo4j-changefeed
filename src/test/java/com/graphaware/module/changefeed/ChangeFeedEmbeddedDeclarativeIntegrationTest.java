@@ -45,7 +45,9 @@ public class ChangeFeedEmbeddedDeclarativeIntegrationTest extends DatabaseIntegr
 
     public void setUp() throws Exception {
         super.setUp();
+
         ProductionRuntime.getRuntime(getDatabase()).waitUntilStarted();
+
         changeReader = new CachingGraphChangeReader(getDatabase());
     }
 
