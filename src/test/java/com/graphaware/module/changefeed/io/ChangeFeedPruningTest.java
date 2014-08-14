@@ -62,7 +62,7 @@ public class ChangeFeedPruningTest {
                 .withTimingStrategy(timingStrategy);
 
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database, runtimeConfiguration);
-        module = new ChangeFeedModule("CFM", ChangeFeedConfiguration.defaultConfiguration().withMaxChanges(10).withPruneDelay(100), database);
+        module = new ChangeFeedModule("CFM", ChangeFeedConfiguration.defaultConfiguration().withMaxChanges(10).withPruneDelay(200), database);
         runtime.registerModule(module);
         runtime.start();
 
@@ -131,7 +131,8 @@ public class ChangeFeedPruningTest {
                 tx.success();
             }
         }
-        Thread.sleep(200);  //Wait for pruning to kick in
+
+        Thread.sleep(250);  //Wait for pruning to kick in
         changes = changeReader.getAllChanges();
         assertEquals(10, changes.size());
     }
