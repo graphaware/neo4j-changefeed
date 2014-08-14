@@ -198,6 +198,13 @@
 
     </dependencies>
 
+    <repositories>
+        <repository>
+            <id>eaio.com</id>
+            <url>http://eaio.com/maven2</url>
+        </repository>
+    </repositories>
+
     <build>
         <plugins>
             <plugin>
