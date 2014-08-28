@@ -67,4 +67,16 @@ public class ChangeFeedSingleModuleServerIntegrationTest extends NeoServerIntegr
 
         Thread.sleep(10000000);
     }
+
+    @Test
+    public void shouldNotBeAbleToDeleteRoot() {
+        executeCypher(baseUrl(), "CREATE (michal:Person {name:'Michal'})");
+        executeCypher(baseUrl(), "CREATE (luanne:Person {name:'Luanne'})");
+        executeCypher(baseUrl(), "CREATE (ga:Company {name:'GraphAware'})");
+        executeCypher(baseUrl(), "MATCH (michal:Person {name:'Michal'}), (ga:Company {name:'GraphAware'}), (luanne:Person {name:'Luanne'}) " +
+                "MERGE (michal)-[:WORKS_FOR]->(ga)<-[:WORKS_FOR]-(luanne)");
+        executeCypher(baseUrl(), "MATCH (n)-[r]-(m) DELETE n,r,m");
+
+        get(baseUrl() + "/graphaware/changefeed/CFM/", HttpStatus.SC_OK);
+    }
 }

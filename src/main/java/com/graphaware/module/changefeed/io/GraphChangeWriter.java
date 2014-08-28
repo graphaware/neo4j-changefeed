@@ -205,7 +205,7 @@ public class GraphChangeWriter implements ChangeWriter {
      *
      * @return root, will never be null.
      */
-    private Node getRoot() {
+    public Node getRoot() {
         if (root == null) {
             throw new IllegalStateException("There is no ChangeFeed Root for Module ID " + moduleId + "! This is a bug.");
         }

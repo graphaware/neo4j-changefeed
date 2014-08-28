@@ -24,6 +24,7 @@ import com.graphaware.module.changefeed.io.GraphChangeWriter;
 import com.graphaware.runtime.config.TxDrivenModuleConfiguration;
 import com.graphaware.runtime.metadata.EmptyContext;
 import com.graphaware.runtime.module.BaseTxDrivenModule;
+import com.graphaware.runtime.module.DeliberateTransactionRollbackException;
 import com.graphaware.runtime.module.TimerDrivenModule;
 import com.graphaware.tx.event.improved.api.ImprovedTransactionData;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -76,6 +77,10 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
      */
     @Override
     public Void beforeCommit(ImprovedTransactionData transactionData) {
+        if (transactionData.hasBeenDeleted(changeWriter.getRoot())) {
+            throw new DeliberateTransactionRollbackException("Not allowed to delete change feed root!");
+        }
+
         changeWriter.recordChanges(transactionData.mutationsToStrings());
         return null;
     }

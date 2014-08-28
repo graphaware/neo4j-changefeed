@@ -117,7 +117,7 @@ public class ChangeSet {
         return "ChangeSet{" +
                 "uuid='" + uuid + '\'' +
                 ", timestamp=" + timestamp +
-                ", changes=" + ArrayUtils.primitiveOrStringArrayToString(changes) +
+                ", changes=" + ArrayUtils.primitiveOrStringArrayToString(getChangesAsArray()) +
                 '}';
     }
 }
