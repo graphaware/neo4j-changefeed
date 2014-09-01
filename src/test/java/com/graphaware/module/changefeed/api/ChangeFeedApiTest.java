@@ -137,7 +137,7 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
             tx.success();
         }
 
-        Thread.sleep(300);
+        Thread.sleep(400);
 
         try (Transaction tx = getDatabase().beginTx()) {
             assertEquals(3, count(at(getDatabase()).getAllNodesWithLabel(_GA_ChangeSet)));
