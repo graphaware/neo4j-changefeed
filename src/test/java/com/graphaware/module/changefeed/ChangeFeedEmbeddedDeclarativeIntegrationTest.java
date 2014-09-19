@@ -38,7 +38,8 @@ public class ChangeFeedEmbeddedDeclarativeIntegrationTest extends DatabaseIntegr
 
     @Override
     protected GraphDatabaseService createDatabase() {
-        return new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
+        return new TestGraphDatabaseFactory()
+                .newImpermanentDatabaseBuilder()
                 .loadPropertiesFromFile(this.getClass().getClassLoader().getResource("neo4j-changefeed.properties").getPath())
                 .newGraphDatabase();
     }
@@ -53,7 +54,7 @@ public class ChangeFeedEmbeddedDeclarativeIntegrationTest extends DatabaseIntegr
 
     @Test
     public void graphChangesShouldAppearInTheChangeFeed() {
-        Node node1, node2;
+        Node node1, node2, node3;
         try (Transaction tx = getDatabase().beginTx()) {
             node1 = getDatabase().createNode();
             node1.setProperty("name", "MB");
@@ -75,6 +76,16 @@ public class ChangeFeedEmbeddedDeclarativeIntegrationTest extends DatabaseIntegr
             node1.setProperty("name", "Michal");
             node2.removeProperty("location");
             node2.removeLabel(DynamicLabel.label("Company"));
+            tx.success();
+        }
+
+        try (Transaction tx = getDatabase().beginTx()) {
+            node3 = getDatabase().createNode(DynamicLabel.label("NotIncluded"));
+            tx.success();
+        }
+
+        try (Transaction tx = getDatabase().beginTx()) {
+            node3.createRelationshipTo(node1, DynamicRelationshipType.withName("NOT_INCLUDED"));
             tx.success();
         }
 

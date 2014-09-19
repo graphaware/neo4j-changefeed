@@ -16,6 +16,14 @@
 
 package com.graphaware.module.changefeed;
 
+import com.graphaware.common.policy.NodeInclusionPolicy;
+import com.graphaware.common.policy.NodePropertyInclusionPolicy;
+import com.graphaware.common.policy.RelationshipInclusionPolicy;
+import com.graphaware.common.policy.RelationshipPropertyInclusionPolicy;
+import com.graphaware.runtime.config.function.StringToNodeInclusionPolicy;
+import com.graphaware.runtime.config.function.StringToNodePropertyInclusionPolicy;
+import com.graphaware.runtime.config.function.StringToRelationshipInclusionPolicy;
+import com.graphaware.runtime.config.function.StringToRelationshipPropertyInclusionPolicy;
 import com.graphaware.runtime.module.RuntimeModule;
 import com.graphaware.runtime.module.RuntimeModuleBootstrapper;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -35,6 +43,10 @@ public class ChangeFeedModuleBootstrapper implements RuntimeModuleBootstrapper {
     private static final String MAX_CHANGES = "maxChanges";
     private static final String PRUNE_DELAY = "pruneDelay";
     private static final String PRUNE_WHEN_EXCEEDED = "pruneWhenExceeded";
+    private static final String NODE = "node";
+    private static final String NODE_PROPERTY = "node.property";
+    private static final String RELATIONSHIP = "relationship";
+    private static final String RELATIONSHIP_PROPERTY = "relationship.property";
 
     /**
      * {@inheritDoc}
@@ -59,6 +71,30 @@ public class ChangeFeedModuleBootstrapper implements RuntimeModuleBootstrapper {
             int pruneWhenExceeded = Integer.parseInt(config.get(PRUNE_WHEN_EXCEEDED));
             LOG.info("PruneWhenExceeded set to {}", pruneWhenExceeded);
             configuration = configuration.withPruneWhenMaxExceededBy(pruneWhenExceeded);
+        }
+
+        if (config.get(NODE) != null) {
+            NodeInclusionPolicy policy = StringToNodeInclusionPolicy.getInstance().apply(config.get(NODE));
+            LOG.info("Node Inclusion Strategy set to {}", policy);
+            configuration = configuration.with(policy);
+        }
+
+        if (config.get(NODE_PROPERTY) != null) {
+            NodePropertyInclusionPolicy policy = StringToNodePropertyInclusionPolicy.getInstance().apply(config.get(NODE_PROPERTY));
+            LOG.info("Node Property Inclusion Strategy set to {}", policy);
+            configuration = configuration.with(policy);
+        }
+
+        if (config.get(RELATIONSHIP) != null) {
+            RelationshipInclusionPolicy policy = StringToRelationshipInclusionPolicy.getInstance().apply(config.get(RELATIONSHIP));
+            LOG.info("Relationship Inclusion Strategy set to {}", policy);
+            configuration = configuration.with(policy);
+        }
+
+        if (config.get(RELATIONSHIP_PROPERTY) != null) {
+            RelationshipPropertyInclusionPolicy policy = StringToRelationshipPropertyInclusionPolicy.getInstance().apply(config.get(RELATIONSHIP_PROPERTY));
+            LOG.info("Relationship Property Inclusion Strategy set to {}", policy);
+            configuration = configuration.with(policy);
         }
 
         return new ChangeFeedModule(moduleId, configuration, database);

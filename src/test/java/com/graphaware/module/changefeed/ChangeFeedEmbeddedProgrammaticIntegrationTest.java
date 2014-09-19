@@ -16,7 +16,7 @@
 
 package com.graphaware.module.changefeed;
 
-import com.graphaware.common.strategy.NodeInclusionStrategy;
+import com.graphaware.common.policy.NodeInclusionPolicy;
 import com.graphaware.module.changefeed.cache.CachingGraphChangeReader;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.domain.Labels;
@@ -361,7 +361,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
         ChangeFeedConfiguration configuration1 = ChangeFeedConfiguration
                 .defaultConfiguration()
-                .with(new NodeInclusionStrategy() {
+                .with(new NodeInclusionPolicy() {
                     @Override
                     public boolean include(Node node) {
                         return node.hasLabel(DynamicLabel.label("Person"));
