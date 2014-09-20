@@ -177,8 +177,6 @@ good practice to expose internal IDs outside of Neo4j. Please use custom identif
 Also note that the contents of the changes are human-, rather than machine-readable. This will be changed in future
 versions.
 
-Both functionality and performance of ChangeFeed have been extensively tested on single-machine deployments. 
-
 License
 -------
 
