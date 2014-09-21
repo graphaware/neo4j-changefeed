@@ -1,6 +1,5 @@
 package com.graphaware.module.changefeed.cache;
 
-import com.graphaware.module.changefeed.ChangeFeedModule;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.io.GraphChangeWriter;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -17,10 +16,11 @@ public class CachingGraphChangeWriter extends GraphChangeWriter {
      *
      * @param database in which to store the changes.
      * @param moduleId ID of the module storing changes.
+     * @param cache    for caching changes.
      */
-    public CachingGraphChangeWriter(GraphDatabaseService database, String moduleId) {
+    public CachingGraphChangeWriter(GraphDatabaseService database, String moduleId, ChangeSetCache cache) {
         super(database, moduleId);
-        cache = ChangeFeedModule.getCache(moduleId);
+        this.cache = cache;
     }
 
     /**

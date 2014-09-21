@@ -18,7 +18,6 @@ package com.graphaware.module.changefeed;
 
 import com.graphaware.module.changefeed.cache.CachingGraphChangeWriter;
 import com.graphaware.module.changefeed.cache.ChangeSetCache;
-import com.graphaware.module.changefeed.cache.ChangeSetCacheRepository;
 import com.graphaware.module.changefeed.io.GraphChangeReader;
 import com.graphaware.module.changefeed.io.GraphChangeWriter;
 import com.graphaware.runtime.config.TxDrivenModuleConfiguration;
@@ -37,12 +36,6 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
 
     public static final String DEFAULT_MODULE_ID = "CFM";
 
-    private static final ChangeSetCacheRepository CACHE_REPOSITORY = new ChangeSetCacheRepository();
-
-    public static ChangeSetCache getCache(String moduleId) {
-        return CACHE_REPOSITORY.getCache(moduleId);
-    }
-
     private final ChangeFeedConfiguration configuration;
     private final GraphChangeWriter changeWriter;
     private final ChangeSetCache changesCache;
@@ -51,8 +44,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
         super(moduleId);
         this.configuration = configuration;
         this.changesCache = new ChangeSetCache(configuration.getMaxChanges());
-        CACHE_REPOSITORY.registerCache(moduleId, changesCache);
-        this.changeWriter = new CachingGraphChangeWriter(database, moduleId);
+        this.changeWriter = new CachingGraphChangeWriter(database, moduleId, changesCache);
     }
 
     /**
@@ -70,6 +62,15 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     @Override
     public TxDrivenModuleConfiguration getConfiguration() {
         return configuration;
+    }
+
+    /**
+     * Get cache of changes.
+     *
+     * @return cache.
+     */
+    public ChangeSetCache getChangesCache() {
+        return changesCache;
     }
 
     /**
@@ -100,14 +101,5 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
     public EmptyContext doSomeWork(EmptyContext lastContext, GraphDatabaseService database) {
         changeWriter.pruneChanges(configuration.getMaxChanges(), configuration.getPruneWhenMaxExceededBy());
         return new EmptyContext(System.currentTimeMillis() + configuration.getPruneDelay());
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void shutdown() {
-        super.shutdown();
-        CACHE_REPOSITORY.clear();
     }
 }
