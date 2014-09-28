@@ -3,10 +3,11 @@ package com.graphaware.module.changefeed.cache;
 import com.graphaware.module.changefeed.ChangeFeedModule;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.io.GraphChangeReader;
-import com.graphaware.runtime.ProductionRuntime;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import java.util.Collection;
+
+import static com.graphaware.runtime.ProductionRuntime.getStartedRuntime;
 
 /**
  * {@link GraphChangeReader} which reads the changes from {@link ChangeSetCache}.
@@ -35,14 +36,7 @@ public class CachingGraphChangeReader extends GraphChangeReader {
     public CachingGraphChangeReader(GraphDatabaseService database, String moduleId) {
         super(database, moduleId);
 
-        ProductionRuntime runtime = ProductionRuntime.getRuntime(database);
-
-        if (runtime == null) {
-            throw new IllegalStateException("ChangeFeed Module requires the GraphAware Runtime to be registered with the database");
-        }
-
-        runtime.waitUntilStarted();
-        cache = runtime.getModule(moduleId, ChangeFeedModule.class).getChangesCache();
+        cache = getStartedRuntime(database).getModule(moduleId, ChangeFeedModule.class).getChangesCache();
     }
 
     /**
