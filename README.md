@@ -100,7 +100,8 @@ Alternatively:
  GraphDatabaseService database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(pathToDb)
     .loadPropertiesFromFile(this.getClass().getClassLoader().getResource("neo4j.properties").getPath())
     .newGraphDatabase();
- 
+
+ ProductionRuntime.getRuntime(database).waitUntilStarted();
  //make sure neo4j.properties contain the lines mentioned in previous section
 ```
 
