@@ -7,7 +7,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 
 import java.util.Collection;
 
-import static com.graphaware.runtime.ProductionRuntime.getStartedRuntime;
+import static com.graphaware.runtime.RuntimeRegistry.getStartedRuntime;
 
 /**
  * {@link GraphChangeReader} which reads the changes from {@link ChangeSetCache}.

@@ -19,7 +19,6 @@ package com.graphaware.module.changefeed;
 import com.graphaware.module.changefeed.cache.CachingGraphChangeReader;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.io.ChangeReader;
-import com.graphaware.runtime.ProductionRuntime;
 import com.graphaware.test.integration.DatabaseIntegrationTest;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
@@ -28,6 +27,7 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 import java.util.Collection;
 import java.util.Iterator;
 
+import static com.graphaware.runtime.RuntimeRegistry.getRuntime;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
@@ -47,7 +47,7 @@ public class ChangeFeedEmbeddedDeclarativeIntegrationTest extends DatabaseIntegr
     public void setUp() throws Exception {
         super.setUp();
 
-        ProductionRuntime.getRuntime(getDatabase()).waitUntilStarted();
+        getRuntime(getDatabase()).waitUntilStarted();
 
         changeReader = new CachingGraphChangeReader(getDatabase());
     }
@@ -114,7 +114,5 @@ public class ChangeFeedEmbeddedDeclarativeIntegrationTest extends DatabaseIntegr
 
         assertTrue(set1Date >= set2Date);
         assertTrue(set2Date >= set3Date);
-
     }
-
 }
