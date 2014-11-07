@@ -27,6 +27,7 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 import java.util.Collection;
 import java.util.Iterator;
 
+import static com.graphaware.common.util.DatabaseUtils.registerShutdownHook;
 import static com.graphaware.runtime.RuntimeRegistry.getRuntime;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
@@ -38,10 +39,15 @@ public class ChangeFeedEmbeddedDeclarativeIntegrationTest extends DatabaseIntegr
 
     @Override
     protected GraphDatabaseService createDatabase() {
-        return new TestGraphDatabaseFactory()
+        GraphDatabaseService database = new TestGraphDatabaseFactory()
                 .newImpermanentDatabaseBuilder()
                 .loadPropertiesFromFile(this.getClass().getClassLoader().getResource("neo4j-changefeed.properties").getPath())
                 .newGraphDatabase();
+
+        registerShutdownHook(database);
+
+        return database;
+
     }
 
     public void setUp() throws Exception {

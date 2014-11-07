@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import static com.graphaware.common.util.DatabaseUtils.registerShutdownHook;
 import static org.junit.Assert.assertEquals;
 
 public class ChangeFeedPruningTest {
@@ -51,6 +52,7 @@ public class ChangeFeedPruningTest {
     @Before
     public void setUp() {
         database = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        registerShutdownHook(database);
 
         TimingStrategy timingStrategy = FixedDelayTimingStrategy
                 .getInstance()
