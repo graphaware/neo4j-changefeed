@@ -515,4 +515,47 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
         return uuids;
     }
+
+    @Test
+    public void eachChangeSetShouldHaveSingleRelationshipToNextChangeSet() throws InterruptedException {
+        registerSingleModuleAndStart();
+
+        ExecutorService executorService = Executors.newFixedThreadPool(50);
+        for (int i = 0; i < 500; i++) {
+            executorService.submit(new Runnable() {
+                @Override
+                public void run() {
+                    try (Transaction tx = getDatabase().beginTx()) {
+                        Node node = getDatabase().createNode();
+                        node.setProperty("age", java.util.UUID.randomUUID().toString());
+                        tx.success();
+                    } catch (Exception e) {
+                        System.out.println("e = " + e);
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+
+        executorService.shutdown();
+        executorService.awaitTermination(2,TimeUnit.MINUTES);
+        Thread.sleep(5000);
+
+        //Start walking the changefeed from root and make sure there is only one _GA_CHANGEFEED_NEXT_CHANGE relationship
+        try (Transaction tx = getDatabase().beginTx()) {
+            Node changeRoot = getSingleOrNull(at(getDatabase()).getAllNodesWithLabel(Labels._GA_ChangeFeed));
+            assertNotNull(changeRoot);
+            Relationship oldestChangeRel = changeRoot.getSingleRelationship(Relationships._GA_CHANGEFEED_OLDEST_CHANGE, Direction.OUTGOING);
+            assertNotNull(oldestChangeRel);
+            oldestChangeRel = oldestChangeRel.getEndNode().getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.INCOMING);
+            while (oldestChangeRel != null) {
+                changeRoot = oldestChangeRel.getStartNode();
+                oldestChangeRel = changeRoot.getSingleRelationship(Relationships._GA_CHANGEFEED_NEXT_CHANGE, Direction.INCOMING);
+                assertNotNull(changeRoot);
+
+            }
+            tx.success();
+        }
+
+    }
 }

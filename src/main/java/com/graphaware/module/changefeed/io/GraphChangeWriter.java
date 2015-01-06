@@ -73,15 +73,9 @@ public class GraphChangeWriter implements ChangeWriter {
      */
     @Override
     public void recordChanges(Set<String> changes) {
-        try (Transaction tx = database.beginTx()) {
-            tx.acquireWriteLock(getRoot());
-
             ChangeSet changeSet = new ChangeSet(uuidGenerator.generateUuid());
             changeSet.addChanges(changes);
             recordChanges(changeSet);
-
-            tx.success();
-        }
     }
 
     /**
@@ -158,10 +152,13 @@ public class GraphChangeWriter implements ChangeWriter {
 
                     LOG.debug("Preparing to prune change feed");
                     if (nextRel != null) {
+                        Lock rootLock = tx.acquireWriteLock(getRoot());
+                        Lock oldestNodeLock = tx.acquireWriteLock(oldestNode);
                         nextRel.delete();
                         oldestChangeRel.delete();
                         getRoot().createRelationshipTo(lastNodeToKeep, _GA_CHANGEFEED_OLDEST_CHANGE);
-
+                        oldestNodeLock.release();
+                        rootLock.release();
                         Relationship previousChange = oldestNode.getSingleRelationship(_GA_CHANGEFEED_NEXT_CHANGE, INCOMING);
                         while (previousChange != null) {
                             Node newOldestNode = previousChange.getStartNode();
