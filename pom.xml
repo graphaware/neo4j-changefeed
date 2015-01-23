@@ -19,7 +19,7 @@
 
     <groupId>com.graphaware.neo4j</groupId>
     <artifactId>changefeed</artifactId>
-    <version>2.1.6.26.8-SNAPSHOT</version>
+    <version>2.1.6.27.7</version>
 
     <parent>
         <groupId>org.sonatype.oss</groupId>
