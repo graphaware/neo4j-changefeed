@@ -16,9 +16,8 @@
 
 package com.graphaware.module.changefeed.cache;
 
+import com.graphaware.common.uuid.EaioUuidGenerator;
 import com.graphaware.module.changefeed.domain.ChangeSet;
-import com.graphaware.module.changefeed.util.EaioUuidGenerator;
-import com.graphaware.module.changefeed.util.UuidGenerator;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -35,7 +34,7 @@ import static junit.framework.Assert.assertEquals;
 
 public class ChangeSetCacheTest {
 
-    private final UuidGenerator uuidGenerator = new EaioUuidGenerator();
+    private final EaioUuidGenerator uuidGenerator = new EaioUuidGenerator(); //todo program against interface with next FW release
     private List<String> uuids;
 
     @Before
