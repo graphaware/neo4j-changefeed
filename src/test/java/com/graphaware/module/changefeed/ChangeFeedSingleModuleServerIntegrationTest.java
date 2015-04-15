@@ -25,8 +25,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.graphaware.test.util.TestUtils.executeCypher;
-import static com.graphaware.test.util.TestUtils.get;
 import static junit.framework.Assert.assertTrue;
 
 
@@ -42,13 +40,13 @@ public class ChangeFeedSingleModuleServerIntegrationTest extends NeoServerIntegr
 
     @Test
     public void graphChangesShouldAppearInChangeFeed() {
-        executeCypher(baseUrl(), "CREATE (p:Person {name: 'MB'})");
-        assertTrue(get(baseUrl() + "/graphaware/changefeed/CFM/", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
+        httpClient.executeCypher(baseUrl(), "CREATE (p:Person {name: 'MB'})");
+        assertTrue(httpClient.get(baseUrl() + "/graphaware/changefeed/CFM/", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
     }
 
     @Test
     public void unknownModuleShouldReturn404() {
-        get(baseUrl() + "/graphaware/changefeed/unknown/", HttpStatus.SC_NOT_FOUND);
+        httpClient.get(baseUrl() + "/graphaware/changefeed/unknown/", HttpStatus.SC_NOT_FOUND);
     }
 
     @Test
@@ -60,7 +58,7 @@ public class ChangeFeedSingleModuleServerIntegrationTest extends NeoServerIntegr
             executorService.submit(new Runnable() {
                 @Override
                 public void run() {
-                    executeCypher(baseUrl(), "CREATE (p:Person {name: 'Person" + UUID.randomUUID() + "'})");
+                    httpClient.executeCypher(baseUrl(), "CREATE (p:Person {name: 'Person" + UUID.randomUUID() + "'})");
                 }
             });
         }
@@ -70,13 +68,13 @@ public class ChangeFeedSingleModuleServerIntegrationTest extends NeoServerIntegr
 
     @Test
     public void shouldNotBeAbleToDeleteRoot() {
-        executeCypher(baseUrl(), "CREATE (michal:Person {name:'Michal'})");
-        executeCypher(baseUrl(), "CREATE (luanne:Person {name:'Luanne'})");
-        executeCypher(baseUrl(), "CREATE (ga:Company {name:'GraphAware'})");
-        executeCypher(baseUrl(), "MATCH (michal:Person {name:'Michal'}), (ga:Company {name:'GraphAware'}), (luanne:Person {name:'Luanne'}) " +
+        httpClient.executeCypher(baseUrl(), "CREATE (michal:Person {name:'Michal'})");
+        httpClient.executeCypher(baseUrl(), "CREATE (luanne:Person {name:'Luanne'})");
+        httpClient.executeCypher(baseUrl(), "CREATE (ga:Company {name:'GraphAware'})");
+        httpClient.executeCypher(baseUrl(), "MATCH (michal:Person {name:'Michal'}), (ga:Company {name:'GraphAware'}), (luanne:Person {name:'Luanne'}) " +
                 "MERGE (michal)-[:WORKS_FOR]->(ga)<-[:WORKS_FOR]-(luanne)");
-        executeCypher(baseUrl(), "MATCH (n)-[r]-(m) DELETE n,r,m");
+        httpClient.executeCypher(baseUrl(), "MATCH (n)-[r]-(m) DELETE n,r,m");
 
-        get(baseUrl() + "/graphaware/changefeed/CFM/", HttpStatus.SC_OK);
+        httpClient.get(baseUrl() + "/graphaware/changefeed/CFM/", HttpStatus.SC_OK);
     }
 }

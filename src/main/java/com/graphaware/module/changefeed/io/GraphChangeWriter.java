@@ -17,6 +17,7 @@
 package com.graphaware.module.changefeed.io;
 
 import com.graphaware.common.uuid.EaioUuidGenerator;
+import com.graphaware.common.uuid.UuidGenerator;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.domain.Labels;
 import com.graphaware.module.changefeed.domain.Relationships;
@@ -40,7 +41,7 @@ import static org.neo4j.graphdb.Direction.OUTGOING;
 public class GraphChangeWriter implements ChangeWriter {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphChangeWriter.class);
-    private final EaioUuidGenerator uuidGenerator = new EaioUuidGenerator(); //todo program against interface with next FW release
+    private final UuidGenerator uuidGenerator = new EaioUuidGenerator();
 
     private final GraphDatabaseService database;
     private final String moduleId;

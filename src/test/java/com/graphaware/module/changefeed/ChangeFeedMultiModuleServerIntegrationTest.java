@@ -25,8 +25,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.graphaware.test.util.TestUtils.executeCypher;
-import static com.graphaware.test.util.TestUtils.get;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
@@ -43,20 +41,20 @@ public class ChangeFeedMultiModuleServerIntegrationTest extends NeoServerIntegra
 
     @Test
     public void graphChangesShouldAppearInChangeFeed() {
-        executeCypher(baseUrl(), "CREATE (p:Person {name: 'MB'})");
-        executeCypher(baseUrl(), "CREATE (p:Person {name: 'LM'})");
-        executeCypher(baseUrl(), "CREATE (p:Person {name: 'DM'})");
-        executeCypher(baseUrl(), "CREATE (p:Person {name: 'VB'})");
+        httpClient.executeCypher(baseUrl(), "CREATE (p:Person {name: 'MB'})");
+        httpClient.executeCypher(baseUrl(), "CREATE (p:Person {name: 'LM'})");
+        httpClient.executeCypher(baseUrl(), "CREATE (p:Person {name: 'DM'})");
+        httpClient.executeCypher(baseUrl(), "CREATE (p:Person {name: 'VB'})");
 
-        assertFalse(get(baseUrl() + "/graphaware/changefeed/changefeed1/", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
-        assertTrue(get(baseUrl() + "/graphaware/changefeed/changefeed1/", HttpStatus.SC_OK).contains("Created node (:Person {name: LM})"));
-        assertTrue(get(baseUrl() + "/graphaware/changefeed/changefeed2/", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
-        assertTrue(get(baseUrl() + "/graphaware/changefeed/changefeed2/", HttpStatus.SC_OK).contains("Created node (:Person {name: LM})"));
+        assertFalse(httpClient.get(baseUrl() + "/graphaware/changefeed/changefeed1/", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
+        assertTrue(httpClient.get(baseUrl() + "/graphaware/changefeed/changefeed1/", HttpStatus.SC_OK).contains("Created node (:Person {name: LM})"));
+        assertTrue(httpClient.get(baseUrl() + "/graphaware/changefeed/changefeed2/", HttpStatus.SC_OK).contains("Created node (:Person {name: MB})"));
+        assertTrue(httpClient.get(baseUrl() + "/graphaware/changefeed/changefeed2/", HttpStatus.SC_OK).contains("Created node (:Person {name: LM})"));
     }
 
     @Test
     public void unknownModuleShouldReturn404() {
-        get(baseUrl() + "/graphaware/changefeed/CFM/", HttpStatus.SC_NOT_FOUND);
+        httpClient.get(baseUrl() + "/graphaware/changefeed/CFM/", HttpStatus.SC_NOT_FOUND);
     }
 
     @Test
@@ -68,7 +66,7 @@ public class ChangeFeedMultiModuleServerIntegrationTest extends NeoServerIntegra
             executorService.submit(new Runnable() {
                 @Override
                 public void run() {
-                    executeCypher(baseUrl(), "CREATE (p:Person {name: 'Person" + UUID.randomUUID() + "'})");
+                    httpClient.executeCypher(baseUrl(), "CREATE (p:Person {name: 'Person" + UUID.randomUUID() + "'})");
                 }
             });
         }
