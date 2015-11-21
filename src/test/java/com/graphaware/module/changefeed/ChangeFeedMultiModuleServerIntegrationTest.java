@@ -16,7 +16,7 @@
 
 package com.graphaware.module.changefeed;
 
-import com.graphaware.test.integration.CommunityNeoServerIntegrationTest;
+import com.graphaware.test.integration.NeoServerIntegrationTest;
 import org.apache.http.HttpStatus;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -29,7 +29,7 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
 
-public class ChangeFeedMultiModuleServerIntegrationTest extends CommunityNeoServerIntegrationTest {
+public class ChangeFeedMultiModuleServerIntegrationTest extends NeoServerIntegrationTest {
 
     /**
      * {@inheritDoc}
