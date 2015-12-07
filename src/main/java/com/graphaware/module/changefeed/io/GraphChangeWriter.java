@@ -83,7 +83,8 @@ public class GraphChangeWriter implements ChangeWriter {
      *
      * @param changeSet to record.
      */
-    protected void recordChanges(ChangeSet changeSet) {
+    //todo synchronized very temporarily because Neo4j's locking is broken, see https://github.com/neo4j/neo4j/issues/6036
+    protected synchronized void recordChanges(ChangeSet changeSet) {
         try (Transaction tx = database.beginTx()) {
             tx.acquireWriteLock(getRoot());
 
@@ -96,6 +97,7 @@ public class GraphChangeWriter implements ChangeWriter {
             if (firstChangeRel == null) { //First changeSet recorded, create an _GA_CHANGEFEED_OLDEST_CHANGE relation from the root to it
                 getRoot().createRelationshipTo(changeNode, Relationships._GA_CHANGEFEED_OLDEST_CHANGE);
             } else {
+//                tx.acquireWriteLock(firstChangeRel);
                 Node firstChange = firstChangeRel.getEndNode();
                 tx.acquireWriteLock(firstChange);
                 changeNode.createRelationshipTo(firstChange, Relationships._GA_CHANGEFEED_NEXT_CHANGE);
