@@ -17,13 +17,15 @@
 package com.graphaware.module.changefeed;
 
 import com.graphaware.common.policy.InclusionPolicies;
+import com.graphaware.runtime.config.BaseTxAndTimerDrivenModuleConfiguration;
 import com.graphaware.runtime.config.BaseTxDrivenModuleConfiguration;
+import com.graphaware.runtime.config.TxAndTimerDrivenModuleConfiguration;
 import com.graphaware.runtime.policy.InclusionPoliciesFactory;
 
 /**
  * {@link BaseTxDrivenModuleConfiguration} for {@link ChangeFeedModule}.
  */
-public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<ChangeFeedConfiguration> {
+public class ChangeFeedConfiguration extends BaseTxAndTimerDrivenModuleConfiguration<ChangeFeedConfiguration> implements TxAndTimerDrivenModuleConfiguration {
 
     private static final int DEFAULT_MAX_CHANGES = 100;
     private static final int DEFAULT_PRUNE_DELAY = 10000;
@@ -36,26 +38,31 @@ public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<Cha
     /**
      * Create a default configuration with maximum number of changes = {@link #DEFAULT_MAX_CHANGES},
      * inclusion policies = {@link com.graphaware.runtime.policy.InclusionPoliciesFactory#allBusiness()},
-     * (nothing is excluded except for framework-internal nodes and relationships), prune delay = {@link #DEFAULT_PRUNE_DELAY},
-     * and prune when max exceeded by = {@link #DEFAULT_PRUNE_WHEN_MAX_EXCEEDED_BY}.
+     * (nothing is excluded except for framework-internal nodes and relationships),
+     * initialize until = {@link #NEVER} (this module does not do any initialization), instance policy = {@link InstanceRolePolicy#MASTER_ONLY},
+     * prune delay = {@link #DEFAULT_PRUNE_DELAY}, and prune when max exceeded by = {@link #DEFAULT_PRUNE_WHEN_MAX_EXCEEDED_BY}.
      * <p/>
      * Change this by calling {@link #withMaxChanges(int)}, {@link #withPruneDelay(int)}, {@link #withPruneWhenMaxExceededBy(int)}, with
      * other inclusion policies on the object, always using the returned object (this is a fluent interface).
      */
     public static ChangeFeedConfiguration defaultConfiguration() {
-        return new ChangeFeedConfiguration(InclusionPoliciesFactory.allBusiness(), DEFAULT_MAX_CHANGES, DEFAULT_PRUNE_DELAY, DEFAULT_PRUNE_WHEN_MAX_EXCEEDED_BY);
+        return new ChangeFeedConfiguration(InclusionPoliciesFactory.allBusiness(), NEVER, InstanceRolePolicy.MASTER_ONLY, DEFAULT_MAX_CHANGES, DEFAULT_PRUNE_DELAY, DEFAULT_PRUNE_WHEN_MAX_EXCEEDED_BY);
     }
 
     /**
-     * Create a configuration with given maximum number of changes and custom inclusion policies.
+     * Create a custom configuration.
      *
-     * @param InclusionPolicies      defining what to keep track of and which changes to ignore.
+     * @param inclusionPolicies      defining what to keep track of and which changes to ignore.
+     * @param initializeUntil        until what time in ms since epoch it is ok to re(initialize) the entire module in case the configuration
+     *                               has changed since the last time the module was started, or if it is the first time the module was registered.
+     *                               {@link #NEVER} for never, {@link #ALWAYS} for always.
+     * @param instanceRolePolicy     specifies which role a machine must have in order to run the module with this configuration. Must not be <code>null</code>.
      * @param maxChanges             maximum number of changes to store before some oldest ones are pruned.
      * @param pruneDelay             delay in millis between pruning tasks.
      * @param pruneWhenMaxExceededBy number of changes the maximum needs to be exceeded by before the oldest ones are pruned.
      */
-    protected ChangeFeedConfiguration(InclusionPolicies InclusionPolicies, int maxChanges, int pruneDelay, int pruneWhenMaxExceededBy) {
-        super(InclusionPolicies);
+    protected ChangeFeedConfiguration(InclusionPolicies inclusionPolicies, long initializeUntil, InstanceRolePolicy instanceRolePolicy, int maxChanges, int pruneDelay, int pruneWhenMaxExceededBy) {
+        super(inclusionPolicies, initializeUntil, instanceRolePolicy);
         this.maxChanges = maxChanges;
         this.pruneDelay = pruneDelay;
         this.pruneWhenMaxExceededBy = pruneWhenMaxExceededBy;
@@ -95,7 +102,7 @@ public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<Cha
      * @return new instance.
      */
     public ChangeFeedConfiguration withMaxChanges(int maxChanges) {
-        return new ChangeFeedConfiguration(getInclusionPolicies(), maxChanges, getPruneDelay(), getPruneWhenMaxExceededBy());
+        return new ChangeFeedConfiguration(getInclusionPolicies(), initializeUntil(), getInstanceRolePolicy(), maxChanges, getPruneDelay(), getPruneWhenMaxExceededBy());
     }
 
     /**
@@ -105,7 +112,7 @@ public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<Cha
      * @return new instance.
      */
     public ChangeFeedConfiguration withPruneDelay(int pruneDelay) {
-        return new ChangeFeedConfiguration(getInclusionPolicies(), getMaxChanges(), pruneDelay, getPruneWhenMaxExceededBy());
+        return new ChangeFeedConfiguration(getInclusionPolicies(), initializeUntil(), getInstanceRolePolicy(),getMaxChanges(), pruneDelay, getPruneWhenMaxExceededBy());
     }
 
     /**
@@ -116,15 +123,15 @@ public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<Cha
      * @return new instance.
      */
     public ChangeFeedConfiguration withPruneWhenMaxExceededBy(int pruneWhenMaxExceededBy) {
-        return new ChangeFeedConfiguration(getInclusionPolicies(), getMaxChanges(), pruneDelay, pruneWhenMaxExceededBy);
+        return new ChangeFeedConfiguration(getInclusionPolicies(), initializeUntil(), getInstanceRolePolicy(),getMaxChanges(), pruneDelay, pruneWhenMaxExceededBy);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected ChangeFeedConfiguration newInstance(InclusionPolicies inclusionPolicies) {
-        return new ChangeFeedConfiguration(inclusionPolicies, getMaxChanges(), getPruneDelay(), getPruneWhenMaxExceededBy());
+    protected ChangeFeedConfiguration newInstance(InclusionPolicies inclusionPolicies, long initializeUntil, InstanceRolePolicy instanceRolePolicy) {
+        return new ChangeFeedConfiguration(inclusionPolicies, initializeUntil, instanceRolePolicy, getMaxChanges(), getPruneDelay(), getPruneWhenMaxExceededBy());
     }
 
     /**
@@ -132,15 +139,27 @@ public class ChangeFeedConfiguration extends BaseTxDrivenModuleConfiguration<Cha
      */
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
 
         ChangeFeedConfiguration that = (ChangeFeedConfiguration) o;
 
-        if (maxChanges != that.maxChanges) return false;
-        if (pruneDelay != that.pruneDelay) return false;
-        if (pruneWhenMaxExceededBy != that.pruneWhenMaxExceededBy) return false;
+        if (maxChanges != that.maxChanges) {
+            return false;
+        }
+        if (pruneDelay != that.pruneDelay) {
+            return false;
+        }
+        if (pruneWhenMaxExceededBy != that.pruneWhenMaxExceededBy) {
+            return false;
+        }
 
         return true;
     }

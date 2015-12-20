@@ -20,7 +20,7 @@ import com.graphaware.module.changefeed.cache.CachingGraphChangeWriter;
 import com.graphaware.module.changefeed.cache.ChangeSetCache;
 import com.graphaware.module.changefeed.io.GraphChangeReader;
 import com.graphaware.module.changefeed.io.GraphChangeWriter;
-import com.graphaware.runtime.config.TxDrivenModuleConfiguration;
+import com.graphaware.runtime.config.TxAndTimerDrivenModuleConfiguration;
 import com.graphaware.runtime.metadata.EmptyContext;
 import com.graphaware.runtime.module.BaseTxDrivenModule;
 import com.graphaware.runtime.module.DeliberateTransactionRollbackException;
@@ -60,7 +60,7 @@ public class ChangeFeedModule extends BaseTxDrivenModule<Void> implements TimerD
      * {@inheritDoc}
      */
     @Override
-    public TxDrivenModuleConfiguration getConfiguration() {
+    public TxAndTimerDrivenModuleConfiguration getConfiguration() {
         return configuration;
     }
 
