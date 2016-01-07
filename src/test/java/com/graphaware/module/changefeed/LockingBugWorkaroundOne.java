@@ -24,8 +24,11 @@ import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.config.Setting;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
+import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -34,14 +37,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
-@Ignore //https://github.com/neo4j/neo4j/issues/6036
-public class BugTest {
+@Ignore //demonstrating one workaround to https://github.com/neo4j/neo4j/issues/6036
+public class LockingBugWorkaroundOne {
 
     private GraphDatabaseService database;
 
     @Before
     public void setUp() {
-        database = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        database = new TestGraphDatabaseFactory().newImpermanentDatabase(Collections.<Setting<?>, String>singletonMap(GraphDatabaseFacadeFactory.Configuration.lock_manager,"community"));
         try (Transaction tx = database.beginTx()) {
             database.createNode(DynamicLabel.label("Test"));
             tx.success();
