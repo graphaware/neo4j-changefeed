@@ -2,12 +2,12 @@ GraphAware Neo4j ChangeFeed - RETIRED
 =====================================
 
 ChangeFeed Has Been Retired
--------------------------
+---------------------------
 
 As of March 26th 2016, this module is retiring. This means it will no longer be maintained and released together with
 new versions of the GraphAware Framework and Neo4j. The last compatible Neo4j version is 2.3.2.
 
-ChangeFeed is being replaced by a much more powerful Audit Module, which is part of GraphAware Enterprise and is
+ChangeFeed is being replaced by a much more powerful Audit Module, which is part of <a href="http://graphaware.com/enterprise/">GraphAware Enterprise</a> and is
 available under a commercial subscription. Unlike many other GraphAware modules, nobody is using ChangeFeed in production, to the best of our knowledge.
 
 This repository will remain public. Please <a href="http://graphaware.com/contact/">get in touch</a> if you've been using ChangeFeed and would like to migrate to
