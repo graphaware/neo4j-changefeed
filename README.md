@@ -16,7 +16,7 @@ GraphAware Audit.
 Introduction
 ------------
 
-[![Build Status](https://travis-ci.org/graphaware/neo4j-changefeed.png)](https://travis-ci.org/graphaware/neo4j-changefeed) | <a href="http://graphaware.com/downloads/" target="_blank">Downloads</a> | <a href="http://graphaware.com/site/changefeed/latest/apidocs/" target="_blank">Javadoc</a> | Latest Release: 2.3.2.37.7
+[![Build Status](https://travis-ci.org/graphaware/neo4j-changefeed.png)](https://travis-ci.org/graphaware/neo4j-changefeed) | <a href="http://graphaware.com/site/changefeed/latest/apidocs/" target="_blank">Javadoc</a> | Latest Release: 2.3.2.37.7
 
 GraphAware ChangeFeed is a [GraphAware](https://github.com/graphaware/neo4j-framework) Runtime Module that keeps track of changes made to the graph.
 
