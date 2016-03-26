@@ -201,7 +201,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
                 }
 
                 if (hasRun.compareAndSet(false, true)) {
-                    Thread.sleep(100);
+                    Thread.sleep(200);
                 }
                 return null;
             }
