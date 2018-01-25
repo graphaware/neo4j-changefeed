@@ -33,7 +33,7 @@ public class UuidUtil {
         String uuid;
 
         try (Transaction tx = database.beginTx()) {
-            Node root = getSingleOrNull(database.findNodesByLabelAndProperty(Labels._GA_ChangeFeed, MODULE_ID, "CFM"));
+            Node root = getSingleOrNull(database.findNodes(Labels._GA_ChangeFeed, MODULE_ID, "CFM"));
             if (root == null) {
                 throw new IllegalStateException("The ChangeFeed node should have been created");
             }

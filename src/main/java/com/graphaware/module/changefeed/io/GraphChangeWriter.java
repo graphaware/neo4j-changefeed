@@ -182,7 +182,7 @@ public class GraphChangeWriter implements ChangeWriter {
         Node root;
 
         try (Transaction tx = database.beginTx()) {
-            root = getSingleOrNull(database.findNodesByLabelAndProperty(Labels._GA_ChangeFeed, MODULE_ID, moduleId));
+            root = getSingleOrNull(database.findNodes(Labels._GA_ChangeFeed, MODULE_ID, moduleId));
             if (root == null) {
                 LOG.info("Creating the ChangeFeed Root for Module ID " + moduleId);
                 root = database.createNode(Labels._GA_ChangeFeed);

@@ -26,28 +26,25 @@ import com.graphaware.runtime.config.FluentRuntimeConfiguration;
 import com.graphaware.runtime.config.RuntimeConfiguration;
 import com.graphaware.runtime.schedule.FixedDelayTimingStrategy;
 import com.graphaware.runtime.schedule.TimingStrategy;
-import com.graphaware.test.integration.DatabaseIntegrationTest;
+import com.graphaware.test.integration.EmbeddedDatabaseIntegrationTest;
 import org.apache.commons.lang.ArrayUtils;
 import org.junit.Test;
-import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.helpers.collection.Iterators;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.graphaware.common.util.IterableUtils.count;
 import static com.graphaware.module.changefeed.domain.Labels._GA_ChangeSet;
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
  * Integration test for {@link ChangeFeedApi}.
  */
-public class ChangeFeedApiTest extends DatabaseIntegrationTest {
+public class ChangeFeedApiTest extends EmbeddedDatabaseIntegrationTest {
 
     private ChangeFeedApi api;
-    private ExecutionEngine engine;
     private List<String> uuids;
 
     @Override
@@ -62,7 +59,7 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
                 .withDelay(100);
 
         RuntimeConfiguration runtimeConfiguration = FluentRuntimeConfiguration
-                .defaultConfiguration()
+                .defaultConfiguration(getDatabase())
                 .withTimingStrategy(timingStrategy);
 
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase(), runtimeConfiguration);
@@ -75,20 +72,18 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
 
         runtime.start();
 
-        engine = new ExecutionEngine(getDatabase());
-
-        engine.execute("CREATE (michal:Person {name:'Michal'})");
+        getDatabase().execute("CREATE (michal:Person {name:'Michal'})");
         uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
 
-        engine.execute("CREATE (luanne:Person {name:'Luanne'})");
-        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
-
-
-        engine.execute("CREATE (ga:Company {name:'GraphAware'})");
+        getDatabase().execute("CREATE (luanne:Person {name:'Luanne'})");
         uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
 
 
-        engine.execute("MATCH (michal:Person {name:'Michal'}), (ga:Company {name:'GraphAware'}), (luanne:Person {name:'Luanne'}) " +
+        getDatabase().execute("CREATE (ga:Company {name:'GraphAware'})");
+        uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
+
+
+        getDatabase().execute("MATCH (michal:Person {name:'Michal'}), (ga:Company {name:'GraphAware'}), (luanne:Person {name:'Luanne'}) " +
                 "MERGE (michal)-[:WORKS_FOR]->(ga)<-[:WORKS_FOR]-(luanne)");
         uuids.add(UuidUtil.getUuidOfLatestChange(getDatabase()));
 
@@ -146,17 +141,17 @@ public class ChangeFeedApiTest extends DatabaseIntegrationTest {
     @Test
     public void pruningShouldHappen() throws InterruptedException {
         for (int i = 0; i < 10; i++) {
-            engine.execute("CREATE (:Person {name:'Person" + i + "'})");
+            getDatabase().execute("CREATE (:Person {name:'Person" + i + "'})");
         }
         try (Transaction tx = getDatabase().beginTx()) {
-            assertEquals(14, count(at(getDatabase()).getAllNodesWithLabel(_GA_ChangeSet)));
+            assertEquals(14, Iterators.count(getDatabase().findNodes(_GA_ChangeSet)));
             tx.success();
         }
 
         Thread.sleep(300);
 
         try (Transaction tx = getDatabase().beginTx()) {
-            assertEquals(3, count(at(getDatabase()).getAllNodesWithLabel(_GA_ChangeSet)));
+            assertEquals(3, Iterators.count(getDatabase().findNodes(_GA_ChangeSet)));
             tx.success();
         }
     }

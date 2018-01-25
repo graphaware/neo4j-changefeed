@@ -16,7 +16,7 @@
 
 package com.graphaware.module.changefeed;
 
-import com.graphaware.common.policy.BaseNodeInclusionPolicy;
+import com.graphaware.common.policy.inclusion.BaseNodeInclusionPolicy;
 import com.graphaware.module.changefeed.cache.CachingGraphChangeReader;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.domain.Labels;
@@ -29,12 +29,13 @@ import com.graphaware.runtime.config.FluentRuntimeConfiguration;
 import com.graphaware.runtime.config.RuntimeConfiguration;
 import com.graphaware.runtime.schedule.FixedDelayTimingStrategy;
 import com.graphaware.runtime.schedule.TimingStrategy;
-import com.graphaware.test.integration.DatabaseIntegrationTest;
+import com.graphaware.test.integration.EmbeddedDatabaseIntegrationTest;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.helpers.collection.Iterators;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -50,12 +51,11 @@ import static com.graphaware.module.changefeed.domain.Properties.MODULE_ID;
 import static com.graphaware.module.changefeed.domain.Properties.UUID;
 import static org.junit.Assert.*;
 import static org.neo4j.graphdb.DynamicRelationshipType.withName;
-import static org.neo4j.tooling.GlobalGraphOperations.at;
 
 /**
  * Tests the module in an embedded db programmatically
  */
-public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseIntegrationTest {
+public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends EmbeddedDatabaseIntegrationTest {
 
     @Test
     public void feedShouldBeEmptyOnANewDatabase() {
@@ -74,7 +74,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
         List<String> uuids = performModifications();
 
         try (Transaction tx = getDatabase().beginTx()) {
-            Node changeRoot = getSingleOrNull(at(getDatabase()).getAllNodesWithLabel(Labels._GA_ChangeFeed));
+            Node changeRoot = getSingleOrNull(getDatabase().findNodes(Labels._GA_ChangeFeed));
             assertNotNull(changeRoot);
             Relationship rel = changeRoot.getSingleRelationship(Relationships._GA_CHANGEFEED_OLDEST_CHANGE, Direction.OUTGOING);
             assertNotNull(rel);
@@ -340,7 +340,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
                 .withDelay(100);
 
         RuntimeConfiguration runtimeConfig = FluentRuntimeConfiguration
-                .defaultConfiguration()
+                .defaultConfiguration(getDatabase())
                 .withTimingStrategy(timingStrategy);
 
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(getDatabase(), runtimeConfig);
@@ -364,12 +364,12 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
                 .with(new BaseNodeInclusionPolicy() {
                     @Override
                     public boolean include(Node node) {
-                        return node.hasLabel(DynamicLabel.label("Person"));
+                        return node.hasLabel(Label.label(("Person")));
                     }
 
                     @Override
                     protected Iterable<Node> doGetAll(GraphDatabaseService database) {
-                        return Iterables.asResourceIterable(database.findNodes(DynamicLabel.label("Person")));
+                        return Iterators.asIterable(database.findNodes(Label.label("Person")));
                     }
                 });
 
@@ -548,7 +548,7 @@ public class ChangeFeedEmbeddedProgrammaticIntegrationTest extends DatabaseInteg
 
         //Start walking the changefeed from root and make sure there is only one _GA_CHANGEFEED_NEXT_CHANGE relationship
         try (Transaction tx = getDatabase().beginTx()) {
-            Node changeRoot = getSingleOrNull(at(getDatabase()).getAllNodesWithLabel(Labels._GA_ChangeFeed));
+            Node changeRoot = getSingleOrNull(getDatabase().findNodes(Labels._GA_ChangeFeed));
             assertNotNull(changeRoot);
             Relationship oldestChangeRel = changeRoot.getSingleRelationship(Relationships._GA_CHANGEFEED_OLDEST_CHANGE, Direction.OUTGOING);
             assertNotNull(oldestChangeRel);

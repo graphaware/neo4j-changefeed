@@ -36,7 +36,6 @@ import static com.graphaware.module.changefeed.ChangeFeedModule.DEFAULT_MODULE_I
  * REST API for {@link com.graphaware.module.changefeed.ChangeFeedModule}.
  */
 @Controller
-@RequestMapping("/changefeed")
 public class ChangeFeedApi {
 
     private final GraphDatabaseService database;
@@ -54,7 +53,7 @@ public class ChangeFeedApi {
      * @param limit maximum number of changes to return (optional). Note that this is upper limit only, there might not be that many changes.
      * @return Collection of {@link com.graphaware.module.changefeed.domain.ChangeSet}, latest change first.
      */
-    @RequestMapping(value = "/", method = RequestMethod.GET)
+    @RequestMapping(value = "//changefeed/", method = RequestMethod.GET)
     @ResponseBody
     public Collection<ChangeSet> getChangeFeed(@RequestParam(value = "uuid", required = false) String uuid, @RequestParam(value = "limit", required = false) Integer limit) {
         return getChangeFeed(DEFAULT_MODULE_ID, uuid, limit);
@@ -68,7 +67,7 @@ public class ChangeFeedApi {
      * @param limit    maximum number of changes to return (optional). Note that this is upper limit only, there might not be that many changes.
      * @return Collection of {@link com.graphaware.module.changefeed.domain.ChangeSet}, latest change first.
      */
-    @RequestMapping(value = "/{moduleId}", method = RequestMethod.GET)
+    @RequestMapping(value = "/changefeed/{moduleId}", method = RequestMethod.GET)
     @ResponseBody
     public Collection<ChangeSet> getChangeFeed(@PathVariable String moduleId, @RequestParam(value = "uuid", required = false) String uuid, @RequestParam(value = "limit", required = false) Integer limit) {
         ChangeReader changeReader = new CachingGraphChangeReader(database, moduleId);

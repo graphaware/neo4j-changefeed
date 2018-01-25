@@ -20,9 +20,7 @@ import com.graphaware.common.uuid.EaioUuidGenerator;
 import com.graphaware.common.uuid.UuidGenerator;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.test.RepeatRule;
 
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -45,9 +43,6 @@ public class ChangeSetCacheTest {
             uuids.add(uuidGenerator.generateUuid());
         }
     }
-
-    @Rule
-    public RepeatRule repeatRule = new RepeatRule();
 
     @Test
     public void capacityShouldNotBeExceeded() {
@@ -115,7 +110,7 @@ public class ChangeSetCacheTest {
 
 
     @Test
-    @RepeatRule.Repeat(times = 100)
+//    @RepeatRule.Repeat(times = 100)
     public void survivesHeavyConcurrency() throws InterruptedException {
         final ChangeSetCache queue = new ChangeSetCache(10);
         final AtomicBoolean failure = new AtomicBoolean(false);

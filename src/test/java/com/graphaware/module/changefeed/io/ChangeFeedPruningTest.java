@@ -60,7 +60,7 @@ public class ChangeFeedPruningTest {
                 .withDelay(100);
 
         RuntimeConfiguration runtimeConfiguration = FluentRuntimeConfiguration
-                .defaultConfiguration()
+                .defaultConfiguration(database)
                 .withTimingStrategy(timingStrategy);
 
         GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database, runtimeConfiguration);

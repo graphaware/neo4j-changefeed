@@ -16,7 +16,9 @@
 
 package com.graphaware.module.changefeed;
 
-import com.graphaware.common.policy.InclusionPolicies;
+import com.graphaware.common.policy.inclusion.InclusionPolicies;
+import com.graphaware.common.policy.role.InstanceRolePolicy;
+import com.graphaware.common.policy.role.MasterOnly;
 import com.graphaware.runtime.config.BaseTxAndTimerDrivenModuleConfiguration;
 import com.graphaware.runtime.config.BaseTxDrivenModuleConfiguration;
 import com.graphaware.runtime.config.TxAndTimerDrivenModuleConfiguration;
@@ -39,14 +41,14 @@ public class ChangeFeedConfiguration extends BaseTxAndTimerDrivenModuleConfigura
      * Create a default configuration with maximum number of changes = {@link #DEFAULT_MAX_CHANGES},
      * inclusion policies = {@link com.graphaware.runtime.policy.InclusionPoliciesFactory#allBusiness()},
      * (nothing is excluded except for framework-internal nodes and relationships),
-     * initialize until = {@link #NEVER} (this module does not do any initialization), instance policy = {@link InstanceRolePolicy#MASTER_ONLY},
+     * initialize until = {@link #NEVER} (this module does not do any initialization), instance policy = {@link MasterOnly},
      * prune delay = {@link #DEFAULT_PRUNE_DELAY}, and prune when max exceeded by = {@link #DEFAULT_PRUNE_WHEN_MAX_EXCEEDED_BY}.
      * <p/>
      * Change this by calling {@link #withMaxChanges(int)}, {@link #withPruneDelay(int)}, {@link #withPruneWhenMaxExceededBy(int)}, with
      * other inclusion policies on the object, always using the returned object (this is a fluent interface).
      */
     public static ChangeFeedConfiguration defaultConfiguration() {
-        return new ChangeFeedConfiguration(InclusionPoliciesFactory.allBusiness(), NEVER, InstanceRolePolicy.MASTER_ONLY, DEFAULT_MAX_CHANGES, DEFAULT_PRUNE_DELAY, DEFAULT_PRUNE_WHEN_MAX_EXCEEDED_BY);
+        return new ChangeFeedConfiguration(InclusionPoliciesFactory.allBusiness(), NEVER, MasterOnly.getInstance(), DEFAULT_MAX_CHANGES, DEFAULT_PRUNE_DELAY, DEFAULT_PRUNE_WHEN_MAX_EXCEEDED_BY);
     }
 
     /**
