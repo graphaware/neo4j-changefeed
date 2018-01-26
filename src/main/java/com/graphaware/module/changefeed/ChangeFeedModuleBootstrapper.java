@@ -16,12 +16,12 @@
 
 package com.graphaware.module.changefeed;
 
+import com.graphaware.common.log.LoggerFactory;
 import com.graphaware.runtime.module.BaseRuntimeModuleBootstrapper;
 import com.graphaware.runtime.module.RuntimeModule;
 import com.graphaware.runtime.module.RuntimeModuleBootstrapper;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.neo4j.logging.Log;
 
 import java.util.Map;
 
@@ -30,7 +30,7 @@ import java.util.Map;
  */
 public class ChangeFeedModuleBootstrapper extends BaseRuntimeModuleBootstrapper<ChangeFeedConfiguration> implements RuntimeModuleBootstrapper {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ChangeFeedModuleBootstrapper.class);
+    private static final Log LOG = LoggerFactory.getLogger(ChangeFeedModuleBootstrapper.class);
 
     //keys to use when configuring using neo4j.properties
     private static final String MAX_CHANGES = "maxChanges";

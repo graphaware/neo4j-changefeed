@@ -16,13 +16,13 @@
 
 package com.graphaware.module.changefeed.io;
 
+import com.graphaware.common.log.LoggerFactory;
 import com.graphaware.module.changefeed.ChangeFeedModule;
 import com.graphaware.module.changefeed.domain.ChangeSet;
 import com.graphaware.module.changefeed.domain.Labels;
 import com.graphaware.module.changefeed.domain.Relationships;
 import org.neo4j.graphdb.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.neo4j.logging.Log;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,7 +36,7 @@ import static com.graphaware.module.changefeed.domain.Properties.*;
  */
 public class GraphChangeReader implements ChangeReader {
 
-    private static final Logger LOG = LoggerFactory.getLogger(GraphChangeReader.class);
+    private static final Log LOG = LoggerFactory.getLogger(GraphChangeReader.class);
 
     private final GraphDatabaseService database;
     private final Node root;
